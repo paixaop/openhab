@@ -86,16 +86,10 @@ public class ZWaveProductDatabase {
 				      + "database" + File.separator 
 				      + "products.xml";
 		File file = new File(name);
-		logger.error("ZWAVE Product file:" + name);
-		logger.error("ZWAVE Product file Absolute path:" + file.getAbsolutePath());
-		try {
-			logger.error("ZWAVE Product file Canonical path:" + file.getCanonicalPath());
-		}
-		catch(Exception e) {}
-		
+
 		if (!file.exists()) {
 			database = null;
-			logger.error("Unable to load ZWave product database!");
+			logger.error("Unable to load ZWave product database! File:" + name);
 			return;
 		}
 		
@@ -154,18 +148,10 @@ public class ZWaveProductDatabase {
 			      + cfgFile;
 		
 		File file = new File(name);
-		logger.error("ZWAVE LoadProductFile:" + name);
-		
-		logger.error("ZWAVE Product file LoadProductFile:" + name);
-		logger.error("ZWAVE Product file LoadProductFile Absolute path:" + file.getAbsolutePath());
-		try {
-			logger.error("ZWAVE Product file LoadProductFile Canonical path:" + file.getCanonicalPath());
-		}
-		catch(Exception e) {}
 		
 		if (!file.exists()) {
 			database = null;
-			logger.error("Unable to load ZWave product database!");
+			logger.error("Unable to load ZWave product database! File:" + name);
 			return null;
 		}
 
