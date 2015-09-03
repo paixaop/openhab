@@ -28,7 +28,6 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
  *
  */
 
-
 @XStreamAlias("zwaveScene")
 public class ZWaveScene {
 	@XStreamOmitField
@@ -36,14 +35,23 @@ public class ZWaveScene {
 
 	private String sceneName;
 	private int sceneId;
-	private int dimmingDuration;
 	private ZWaveController controller;
+
+	private HashMap<Integer, ZWaveSceneDevice> devices = new HashMap<Integer, ZWaveSceneDevice>();
 
 	ZWaveScene(ZWaveController zController) {
 		controller = zController;
+		sceneName = "";
+		sceneId = 0;
+		devices.clear();
 	}
 
-	HashMap<Integer, ZWaveSceneDevice> devices = new HashMap<Integer, ZWaveSceneDevice>();
+	ZWaveScene(ZWaveController zController, int sId) {
+		controller = zController;
+		sceneName = "";
+		sceneId = sId;
+		devices.clear();
+	}
 
 	public int getId() {
 		return sceneId;
@@ -67,7 +75,7 @@ public class ZWaveScene {
 	 * @param d ZWaveSceneDevice with the values and node information to
 	 * 		  set when scene is activated
 	 */
-	public void addDevice(Integer nodeId, ZWaveSceneDevice d) {
+	public void addDevice(int nodeId, ZWaveSceneDevice d) {
 		devices.put(nodeId, d);
 	}
 
@@ -76,7 +84,7 @@ public class ZWaveScene {
 	 * @param nodeId id of the node being added to the scene
 	 * @param value of the node that should be set when scene is activated
 	 */
-	public void addDevice(Integer nodeId, Integer value) {
+	public void addDevice(int nodeId, byte value) {
 		ZWaveSceneDevice d = new ZWaveSceneDevice();
 
 		d.setNode(controller.getNode(nodeId));
@@ -85,11 +93,11 @@ public class ZWaveScene {
 		devices.put(nodeId, d);
 	}
 
-	public ZWaveSceneDevice getDevice(Integer nodeId) {
+	public ZWaveSceneDevice getDevice(int nodeId) {
 		return devices.get(nodeId);
 	}
 
-	public void removeDevice(Integer nodeId) {
+	public void removeDevice(int nodeId) {
 		devices.remove(nodeId);
 	}
 
@@ -97,15 +105,13 @@ public class ZWaveScene {
 		return devices;
 	}
 
-	public void addValue(Integer nodeId, String commandClass, Integer value) {
+	public void addValue(int nodeId, byte value) {
 		ZWaveSceneDevice d = new ZWaveSceneDevice();
 
 		if (devices.containsKey(nodeId)) {
 			d = devices.get(nodeId);
-		}
-
-		if (d.nodeId != 0) {
-			d.value = value;
+			d.setValue(value);
+			devices.put(nodeId, d);
 		}
 	}
 }
