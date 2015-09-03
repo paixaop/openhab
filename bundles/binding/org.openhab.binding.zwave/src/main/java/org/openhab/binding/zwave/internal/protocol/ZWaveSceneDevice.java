@@ -11,6 +11,8 @@ package org.openhab.binding.zwave.internal.protocol;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass;
+
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
@@ -42,6 +44,13 @@ public class ZWaveSceneDevice {
 	public void setNode(ZWaveNode n) {
 		logger.debug("Set Node {}", n.getNodeId());
 		node = n;
+		
+		// Check if node supports scene activation
+		ZWaveCommandClass c = node.getCommandClass(ZWaveCommandClass.CommandClass.SCENE_ACTIVATION);
+		sceneSupport = false;
+		if (c != null) {
+			sceneSupport = true;
+		}
 	}
 	
 	public ZWaveNode getNode() {
