@@ -37,7 +37,6 @@ public class ZWaveSceneManager {
 	private static final int MAX_NUMBER_OF_SCENES = 256;
 
 	private HashMap<Integer, ZWaveScene> scenes= new  HashMap<Integer, ZWaveScene>();
-	private Integer sceneCounter;
 	private ZWaveController controller;
 
 	ZWaveSceneManager(ZWaveController zController) {
@@ -167,8 +166,7 @@ public class ZWaveSceneManager {
 	}
 
 	/**
-	 * Group scene devices by value, so ALL devices that belong to a scene and have the
-	 * same value will be in the same group.
+	 * Create groups of devices that do not support the  scene activation command class by value.
 	 * @param sceneId
 	 * @return HashMap<Integer, ArrayList<ZWaveSceneDevice>> H<value, ZWaveSceneDeviceList>
 	 */
@@ -178,13 +176,27 @@ public class ZWaveSceneManager {
 			return null;
 		}
 
+		// Init groups
 		HashMap<Integer, ArrayList<ZWaveSceneDevice>>  groups = new HashMap<Integer, ArrayList<ZWaveSceneDevice>>();
 
+		// Get scene devices
 		ZWaveScene zTemp = scenes.get(sceneId);
 		HashMap<Integer, ZWaveSceneDevice> devices = zTemp.getDevices();
 
+		// Iterate all devices
 		for( ZWaveSceneDevice d : devices.values()) {
+
+			// Get device value
 			int value = d.getValue();
+
+			// Does device support scene activation command class?
+			if (d.isSceneSupported()) {
+				// Scene activation command class supported no need to group
+				// Scene configuration for these devices is done directly with
+				// Scene Actuator Configuration command class.
+				continue;
+			}
+
 			ArrayList<ZWaveSceneDevice> deviceList = new ArrayList<ZWaveSceneDevice>();
 
 			if (groups.containsKey(value)) {
