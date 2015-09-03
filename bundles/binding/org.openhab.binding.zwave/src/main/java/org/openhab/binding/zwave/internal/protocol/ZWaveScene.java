@@ -39,43 +39,6 @@ public class ZWaveScene {
 	private int dimmingDuration;
 	private ZWaveController controller;
 	
-	public class ZWaveSceneDevice {
-		ZWaveNode node;
-		Integer value;
-		boolean sceneSupport;
-		
-		ZWaveSceneDevice() {
-			node = null;
-			value = 0;
-			sceneSupport = false;
-		}
-		
-		public void setNode(ZWaveNode n) {
-			node = n;
-		}
-		
-		public ZWaveNode getNode() {
-			return node;
-		}
-		
-		public boolean isSceneSupported() {
-			return sceneSupport;
-		}
-		
-		public void setSceneSupport(boolean b) {
-			sceneSupport = b;
-		}
-		
-		public void setValue(Integer v) {
-			value = v;
-		}
-		
-		public Integer getValueInt() {
-			return value;
-		}
-		
-	}
-	
 	ZWaveScene(ZWaveController zController) {
 		controller = zController;
 	}
