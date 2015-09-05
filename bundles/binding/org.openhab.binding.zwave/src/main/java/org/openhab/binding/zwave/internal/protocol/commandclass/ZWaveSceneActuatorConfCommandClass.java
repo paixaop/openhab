@@ -16,7 +16,6 @@ import org.openhab.binding.zwave.internal.protocol.ZWaveNode;
 import org.openhab.binding.zwave.internal.protocol.SerialMessage.SerialMessageClass;
 import org.openhab.binding.zwave.internal.protocol.SerialMessage.SerialMessagePriority;
 import org.openhab.binding.zwave.internal.protocol.SerialMessage.SerialMessageType;
-import org.openhab.binding.zwave.internal.protocol.event.ZWaveCommandClassValueEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,10 +24,9 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
 /**
  * Handles the SceneActuatorConf command class.
- * The indicator command class operates the indicator on the physical device if available.
- * This can be used to identify a device or use the indicator for special purposes.
- * Example is the Evolve LCD panel that uses the SceneActuatorConf class to toggle the labels
- * displayed on the LCD. The SceneActuatorConf class is also used to sync multiple panels' labels
+ * The Scene Actuator Configuration Command Class is used to configure
+ * scenes in scene devices like multilevel scene switch, binary
+ * scene switch etc. A scene device must support 255 scene IDs.
  *
  * @author Pedro Paixao
  * @since 1.8.0
