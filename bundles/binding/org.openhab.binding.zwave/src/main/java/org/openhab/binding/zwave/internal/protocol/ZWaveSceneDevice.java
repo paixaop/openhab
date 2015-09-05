@@ -61,10 +61,6 @@ public class ZWaveSceneDevice {
 		return sceneSupport;
 	}
 	
-	public void setSceneSupport(boolean b) {
-		sceneSupport = b;
-	}
-	
 	public void setValue(byte v) {
 		if (node == null) {
 			logger.error("Trying to set a value of a NULL node. Set node first");
