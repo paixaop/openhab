@@ -24,17 +24,10 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
 /**
  * Handles the SceneActuatorConf command class.
-<<<<<<< HEAD
  * The Scene Actuator Configuration Command Class is used to configure
  * scenes in scene devices like multilevel scene switch, binary
  * scene switch etc. A scene device must support 255 scene IDs.
  *
-=======
- * The Scene Actuator Configuration Command Class is used to configure 
- * scenes in scene devices like multilevel scene switch, binary 
- * scene switch etc. A scene device must support 255 scene IDs.
- * 
->>>>>>> origin/CooperSceneController
  * @author Pedro Paixao
  * @since 1.8.0
  */

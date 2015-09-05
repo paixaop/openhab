@@ -24,17 +24,10 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
 /**
  * Handles the SceneControllerConf command class.
-<<<<<<< HEAD
  * The Scene Controller Configuration Command Class is used to configure
  * scenes controlled from a scene controller
  * Scene devices must support 255 scene IDs.
  *
-=======
- * The Scene Controller Configuration Command Class is used to configure 
- * scenes controlled from a scene controller 
- * Scene devices must support 255 scene IDs.
- * 
->>>>>>> origin/CooperSceneController
  * @author Pedro Paixao
  * @since 1.8.0
  */
