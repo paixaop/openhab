@@ -67,16 +67,19 @@ public class ZWaveControllerReplicationCommandClass extends ZWaveCommandClass {
 		switch (command) {
 			case CTRL_REPLICATION_TRANSFER_GROUP:
 				logger.debug("Controller Replication Transfer Group");
-				processControllerReplicationSet(serialMessage, offset, endpoint);
+				processControllerReplicationTransferGroup(serialMessage, offset, endpoint);
 				break;
 			case CTRL_REPLICATION_TRANSFER_GROUP_NAME:
 				logger.debug("Controller Replication Transfer Group Name");
+				processControllerReplicationTransferGroupName(serialMessage, offset, endpoint);
 				break;
 			case CTRL_REPLICATION_TRANSFER_SCENE:
 				logger.debug("Controller Replication Transfer Scene");
+				processControllerReplicationTransferScene(serialMessage, offset, endpoint);
 				break;
 			case CTRL_REPLICATION_TRANSFER_SCENE_NAME:
 				logger.debug("Controller Replication Transfer Scene Name");
+				processControllerReplicationTransferSceneName(serialMessage, offset, endpoint);
 				break;
 			default:
 				logger.warn(String.format("Unsupported Command 0x%02X for command class %s (0x%02X).", 
@@ -87,15 +90,56 @@ public class ZWaveControllerReplicationCommandClass extends ZWaveCommandClass {
 	}
 
 	/**
-	 * Processes a CONTROLLER_REPLICATION_SET message.
+	 * Processes a CTRL_REPLICATION_TRANSFER_GROUP message.
 	 * @param serialMessage the incoming message to process.
 	 * @param offset the offset position from which to start message processing.
 	 * @param endpoint the endpoint or instance number this message is meant for.
 	 */
 	protected void processControllerReplicationTransferGroup(SerialMessage serialMessage, int offset, int endpoint) {
-        int sequenceNumber = serialMessage.getMessagePayloadByte(offset + 1);              
+        // skip frist byte with sequence number              
         int groupId = serialMessage.getMessagePayloadByte(offset + 2);
         int nodeId = serialMessage.getMessagePayloadByte(offset + 3);
 
 	}
+	
+	/**
+	 * Processes a CTRL_REPLICATION_TRANSFER_GROUP_NAME message.
+	 * @param serialMessage the incoming message to process.
+	 * @param offset the offset position from which to start message processing.
+	 * @param endpoint the endpoint or instance number this message is meant for.
+	 */
+	protected void processControllerReplicationTransferGroupName(SerialMessage serialMessage, int offset, int endpoint) {
+        // skip frist byte with sequence number              
+        int groupId = serialMessage.getMessagePayloadByte(offset + 2);
+        int nodeId = serialMessage.getMessagePayloadByte(offset + 3);
+
+	}
+	
+	/**
+	 * Processes a CTRL_REPLICATION_TRANSFER_SCENE message.
+	 * @param serialMessage the incoming message to process.
+	 * @param offset the offset position from which to start message processing.
+	 * @param endpoint the endpoint or instance number this message is meant for.
+	 */
+	protected void processControllerReplicationTransferScene(SerialMessage serialMessage, int offset, int endpoint) {
+        // skip frist byte with sequence number              
+        int groupId = serialMessage.getMessagePayloadByte(offset + 2);
+        int nodeId = serialMessage.getMessagePayloadByte(offset + 3);
+
+	}
+	
+	/**
+	 * Processes a CTRL_REPLICATION_TRANSFER_SCENE_NAME message.
+	 * @param serialMessage the incoming message to process.
+	 * @param offset the offset position from which to start message processing.
+	 * @param endpoint the endpoint or instance number this message is meant for.
+	 */
+	protected void processControllerReplicationTransferSceneName(SerialMessage serialMessage, int offset, int endpoint) {
+        // skip frist byte with sequence number              
+        int groupId = serialMessage.getMessagePayloadByte(offset + 2);
+        int nodeId = serialMessage.getMessagePayloadByte(offset + 3);
+
+	}
+	
+	
 }
