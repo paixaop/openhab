@@ -206,6 +206,4 @@ public class ZWaveSceneManager {
 
 		return groups;
 	}
-
-
 }

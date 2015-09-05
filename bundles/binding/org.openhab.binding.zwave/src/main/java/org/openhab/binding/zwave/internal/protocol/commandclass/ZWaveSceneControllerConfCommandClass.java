@@ -24,10 +24,17 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
 /**
  * Handles the SceneControllerConf command class.
+<<<<<<< HEAD
  * The Scene Controller Configuration Command Class is used to configure
  * scenes controlled from a scene controller
  * Scene devices must support 255 scene IDs.
  *
+=======
+ * The Scene Controller Configuration Command Class is used to configure 
+ * scenes controlled from a scene controller 
+ * Scene devices must support 255 scene IDs.
+ * 
+>>>>>>> origin/CooperSceneController
  * @author Pedro Paixao
  * @since 1.8.0
  */
@@ -136,13 +143,14 @@ public class ZWaveSceneControllerConfCommandClass extends ZWaveCommandClass {
 
 		logger.debug("NODE {}: Creating new message for application command SCENE_CONTROLLER_CONF_GET", this.getNode().getNodeId());
 		SerialMessage result = new SerialMessage(this.getNode().getNodeId(), SerialMessageClass.SendData, SerialMessageType.Request, SerialMessageClass.ApplicationCommandHandler, SerialMessagePriority.Get);
-	byte[] newPayload = { 	(byte) this.getNode().getNodeId(),
-							3,
+
+		byte[] newPayload = { 	(byte) this.getNode().getNodeId(),
+								3,
 								(byte) getCommandClass().getKey(),
 								(byte) SCENE_CONTROLLER_CONF_GET,
 								(byte) groupId };
-	result.setMessagePayload(newPayload);
-	return result;
+		result.setMessagePayload(newPayload);
+		return result;
 	}
 
 	@Override
@@ -163,16 +171,15 @@ public class ZWaveSceneControllerConfCommandClass extends ZWaveCommandClass {
 		logger.debug("NODE {}: Creating new message for application command SCENE_CONTROLLER_CONF_SET", this.getNode().getNodeId());
 		SerialMessage result = new SerialMessage(this.getNode().getNodeId(), SerialMessageClass.SendData, SerialMessageType.Request, SerialMessageClass.SendData, SerialMessagePriority.Set);
 
-	byte[] newPayload = { 	(byte) this.getNode().getNodeId(),
-							5,
+		byte[] newPayload = { 	(byte) this.getNode().getNodeId(),
+								5,
 								(byte) getCommandClass().getKey(),
 								(byte) SCENE_CONTROLLER_CONF_SET,
 								(byte) groupId,
 								(byte) sceneId,
 								(byte) duration,
 								};
-	result.setMessagePayload(newPayload);
-	return result;
+		result.setMessagePayload(newPayload);
+		return result;
 	}
-
 }

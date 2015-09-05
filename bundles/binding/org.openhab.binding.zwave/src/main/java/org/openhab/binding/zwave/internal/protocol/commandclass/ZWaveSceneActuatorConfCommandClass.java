@@ -24,10 +24,17 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
 /**
  * Handles the SceneActuatorConf command class.
+<<<<<<< HEAD
  * The Scene Actuator Configuration Command Class is used to configure
  * scenes in scene devices like multilevel scene switch, binary
  * scene switch etc. A scene device must support 255 scene IDs.
  *
+=======
+ * The Scene Actuator Configuration Command Class is used to configure 
+ * scenes in scene devices like multilevel scene switch, binary 
+ * scene switch etc. A scene device must support 255 scene IDs.
+ * 
+>>>>>>> origin/CooperSceneController
  * @author Pedro Paixao
  * @since 1.8.0
  */
@@ -125,6 +132,7 @@ public class ZWaveSceneActuatorConfCommandClass extends ZWaveCommandClass {
 	}
 
 	/**
+
 	 * Gets a SerialMessage with the SCENE_ACTUATOR_CONF GET command
 	 * @return the serial message
 	 */
@@ -136,13 +144,15 @@ public class ZWaveSceneActuatorConfCommandClass extends ZWaveCommandClass {
 
 		logger.debug("NODE {}: Creating new message for application command SCENE_ACTUATOR_CONF_GET", this.getNode().getNodeId());
 		SerialMessage result = new SerialMessage(this.getNode().getNodeId(), SerialMessageClass.SendData, SerialMessageType.Request, SerialMessageClass.ApplicationCommandHandler, SerialMessagePriority.Get);
-	byte[] newPayload = { 	(byte) this.getNode().getNodeId(),
+		byte[] newPayload = { 	
+							(byte) this.getNode().getNodeId(),
 							3,
-								(byte) getCommandClass().getKey(),
-								(byte) SCENE_ACTUATOR_CONF_GET,
-								(byte) sceneId };
-	result.setMessagePayload(newPayload);
-	return result;
+							(byte) getCommandClass().getKey(),
+							(byte) SCENE_ACTUATOR_CONF_GET,
+							(byte) sceneId };
+		
+		result.setMessagePayload(newPayload);
+		return result;
 	}
 
 	@Override
@@ -163,22 +173,22 @@ public class ZWaveSceneActuatorConfCommandClass extends ZWaveCommandClass {
 		logger.debug("NODE {}: Creating new message for application command SCENE_ACTUATOR_CONF_SET", this.getNode().getNodeId());
 		SerialMessage result = new SerialMessage(this.getNode().getNodeId(), SerialMessageClass.SendData, SerialMessageType.Request, SerialMessageClass.SendData, SerialMessagePriority.Set);
 		byte o = 0;
-
+		
 		if (override) {
 			o = (byte) 0x80;
 		}
 
-	byte[] newPayload = { 	(byte) this.getNode().getNodeId(),
-							6,
+		byte[] newPayload = { 	
+								(byte) this.getNode().getNodeId(),
+								6,
 								(byte) getCommandClass().getKey(),
 								(byte) SCENE_ACTUATOR_CONF_SET,
 								(byte) sceneId,
 								(byte) duration,
 								(byte) o,
 								(byte) level
-								};
-	result.setMessagePayload(newPayload);
-	return result;
+							};
+		result.setMessagePayload(newPayload);
+		return result;
 	}
-
 }

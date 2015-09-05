@@ -8,14 +8,11 @@
  */
 package org.openhab.binding.zwave.internal.protocol;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sun.j3d.utils.scenegraph.io.retained.Controller;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
@@ -68,11 +65,11 @@ public class ZWaveScene {
 	public void setName(String newName) {
 		sceneName = newName;
 	}
-
+	
 	/**
 	 * Add a new ZWave device to a Z-Wave Scene
 	 * @param nodeId id of the node being added to the scene
-	 * @param d ZWaveSceneDevice with the values and node information to
+	 * @param d ZWaveSceneDevice with the values and node information to 
 	 * 		  set when scene is activated
 	 */
 	public void addDevice(int nodeId, ZWaveSceneDevice d) {
@@ -107,7 +104,7 @@ public class ZWaveScene {
 
 	public void addValue(int nodeId, byte value) {
 		ZWaveSceneDevice d = new ZWaveSceneDevice();
-
+		
 		if (devices.containsKey(nodeId)) {
 			d = devices.get(nodeId);
 			d.setValue(value);

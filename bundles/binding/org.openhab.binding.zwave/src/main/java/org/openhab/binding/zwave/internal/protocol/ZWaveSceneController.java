@@ -64,5 +64,4 @@ public class ZWaveSceneController {
 	public boolean isCooper() {
 		return isCooperController;
 	}
-
 }

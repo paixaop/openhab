@@ -75,5 +75,4 @@ public class ZWaveSceneDevice {
 	public byte getValue() {
 		return value;
 	}
-
 }
