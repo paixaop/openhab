@@ -33,8 +33,9 @@ public class ZWaveSceneManager {
 
 	// Maximum number of scenes supported by ZWave
 	private static final int MAX_NUMBER_OF_SCENES = 256;
-
 	private HashMap<Integer, ZWaveScene> scenes= new  HashMap<Integer, ZWaveScene>();
+	
+	@XStreamOmitField
 	private ZWaveController controller;
 
 	ZWaveSceneManager(ZWaveController zController) {

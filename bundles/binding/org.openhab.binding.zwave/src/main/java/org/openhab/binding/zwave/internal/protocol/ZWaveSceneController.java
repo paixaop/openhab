@@ -30,6 +30,7 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
 public class ZWaveSceneController {
 	@XStreamOmitField
 	private static final Logger logger = LoggerFactory.getLogger(ZWaveSceneController.class);
+	private static final int COOPER = 0x001A;
 
 	private ZWaveNode node;
 	private int numberOfGroups;
@@ -55,6 +56,8 @@ public class ZWaveSceneController {
 			logger.error("NODE {} : This device does not support scene controller configuration command class and cannot be configured for scenes.", node.getNodeId());
 			return;
 		}
+		
+		if ( node.getManufacturer() == COOPER
 	}
 
 	public ZWaveNode getNode() {
