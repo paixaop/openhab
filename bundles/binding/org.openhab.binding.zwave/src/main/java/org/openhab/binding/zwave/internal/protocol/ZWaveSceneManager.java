@@ -10,12 +10,10 @@ package org.openhab.binding.zwave.internal.protocol;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.sun.j3d.utils.scenegraph.io.retained.Controller;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
@@ -41,7 +39,6 @@ public class ZWaveSceneManager {
 
 	ZWaveSceneManager(ZWaveController zController) {
 		controller = zController;
-		sceneCounter = 0;
 		scenes.clear();
 	}
 
