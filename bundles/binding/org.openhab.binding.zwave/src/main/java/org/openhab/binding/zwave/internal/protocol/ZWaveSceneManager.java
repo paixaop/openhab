@@ -18,7 +18,7 @@ import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
 /**
- * This class manages all zwave scenes
+ * This class manages all zwave sceneManagerStore
  * This is then serialized to XML.
  *
  * @author Pedro Paixao
@@ -26,29 +26,44 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
  *
  */
 
+/**
+ * Z-Wave Scene Support
+ * 
+ * Scene Manager manages sceneManagerStore for one or more Z-Wave networks, each identified by its
+ * own Home ID.
+ * 
+ * Each Z-Wave network supports up to 255 sceneManagerStore, each with many devices or Z-Wave nodes.
+ * Only nodes in the same network, i.e, same Home ID can participate in a scene.
+ *   
+ * @author Pedro Paixao
+ */
+
 @XStreamAlias("zwaveSceneManager")
 public class ZWaveSceneManager {
 	@XStreamOmitField
 	private static final Logger logger = LoggerFactory.getLogger(ZWaveSceneManager.class);
 
-	// Maximum number of scenes supported by ZWave
-	private static final int MAX_NUMBER_OF_SCENES = 256;
-	private HashMap<Integer, ZWaveScene> scenes= new  HashMap<Integer, ZWaveScene>();
+	// Maximum number of sceneManagerStore supported by ZWave
+	private static final int MAX_NUMBER_OF_sceneManagerStore = 256;
+	
+	// Hash of Z-Wave Home IDs as Keys and sceneManagerStore as Values
+	// sceneManagerStore are themselves a hash of scene ID as key and ZWaveScene values
+	private ZWaveSceneManagerStore sceneManagerStore = new ZWaveSceneManagerStore();
 	
 	@XStreamOmitField
 	private ZWaveController controller;
 
 	ZWaveSceneManager(ZWaveController zController) {
 		controller = zController;
-		scenes.clear();
+		sceneManagerStore.clear();
 	}
 
 	/**
-	 * Get the number of scenes.
-	 * @return int number of registered scenes.
+	 * Get the number of sceneManagerStore.
+	 * @return int number of registered sceneManagerStore.
 	 */
-	public int numberScenes() {
-		return scenes.size();
+	public int numbersceneManagerStore() {
+		return sceneManagerStore.size();
 	}
 
 	/**
@@ -56,19 +71,19 @@ public class ZWaveSceneManager {
 	 * @return int scene ID
 	 */
 	public int getLowestUnusedSceneId() {
-		if (scenes.isEmpty()) {
+		if (sceneManagerStore.isEmpty()) {
 			return 1;
 		}
-		for(int i = 0; i< scenes.size(); i++) {
-			if (!scenes.containsKey(i)) {
+		for(int i = 0; i< sceneManagerStore.size(); i++) {
+			if (!sceneManagerStore.containsKey(i)) {
 				return i;
 			}
 		}
-		if (scenes.size() < MAX_NUMBER_OF_SCENES) {
-			return scenes.size() + 1;
+		if (sceneManagerStore.size() < MAX_NUMBER_OF_sceneManagerStore) {
+			return sceneManagerStore.size() + 1;
 		}
 		else {
-			logger.info("Maximum number of scenes ({})reached. Cannot add new scenes until you delete some.", MAX_NUMBER_OF_SCENES);
+			logger.info("Maximum number of sceneManagerStore ({})reached. Cannot add new sceneManagerStore until you delete some.", MAX_NUMBER_OF_sceneManagerStore);
 			return -1;
 		}
 	}
@@ -86,30 +101,30 @@ public class ZWaveSceneManager {
 	 * @return sceneId in case the scene is successful added, 0 otherwise
 	 */
 	public int newScene(String newName) {
-		if (scenes.size() < MAX_NUMBER_OF_SCENES) {
+		if (sceneManagerStore.size() < MAX_NUMBER_OF_sceneManagerStore) {
 			int sceneId = getLowestUnusedSceneId();
 			ZWaveScene zTemp = new ZWaveScene(controller, sceneId);
 			zTemp.setName(newName);
-			scenes.put(sceneId, zTemp);
+			sceneManagerStore.put(sceneId, zTemp);
 			return sceneId;
 		}
 		else {
-			logger.info("Maximum number of scenes ({})reached. Cannot add new scenes until you delete some.", MAX_NUMBER_OF_SCENES);
+			logger.info("Maximum number of sceneManagerStore ({})reached. Cannot add new sceneManagerStore until you delete some.", MAX_NUMBER_OF_sceneManagerStore);
 			return 0;
 		}
 	}
 
 	/**
-	 * Delete scene. This sceneId becomes available for new scenes.
+	 * Delete scene. This sceneId becomes available for new sceneManagerStore.
 	 * @param sceneId
 	 */
 	public void removeScene(int sceneId) {
-		if (!scenes.containsKey(sceneId)) {
+		if (!sceneManagerStore.containsKey(sceneId)) {
 			logger.error("Invalid sceneId {}", sceneId);
 			return;
 		}
 		logger.info("Removing scene {}", sceneId);
-		scenes.remove(sceneId);
+		sceneManagerStore.remove(sceneId);
 	}
 
 	/**
@@ -118,23 +133,24 @@ public class ZWaveSceneManager {
 	 * @param newName new name for the scene
 	 */
 	public void setName(int sceneId, String newName) {
-		if (!scenes.containsKey(sceneId)) {
+		if (!sceneManagerStore.containsKey(sceneId)) {
 			logger.error("Invalid sceneId {}", sceneId);
 			return;
 		}
-		ZWaveScene zTemp = scenes.get(sceneId);
-		zTemp.setName(newName);
-		scenes.put(sceneId, zTemp);
+		ZWaveScene scene = sceneManagerStore.get(sceneId);
+		scene.setName(newName);
+		sceneManagerStore.put(sceneId, scene);
 	}
 
 	public void addDevice(int sceneId, int nodeId, byte value) {
-		if (!scenes.containsKey(sceneId)) {
+		if (!sceneManagerStore.containsKey(sceneId)) {
 			logger.error("Invalid sceneId {}", sceneId);
 			return;
 		}
-
-		ZWaveScene zTemp = scenes.get(sceneId);
-		zTemp.addDevice(nodeId, value);
+		
+		ZWaveScene scene = sceneManagerStore.get(sceneId);
+		scene.addDevice(nodeId, value);
+		sceneManagerStore.put(sceneId, scene);
 	}
 
 	/**
@@ -143,23 +159,24 @@ public class ZWaveSceneManager {
 	 * @param d ZWaveSceneDevice with the values and node information to
 	 * 		  set when scene is activated
 	 */
-	public void addDevice(int sceneId, int nodeId, ZWaveSceneDevice d) {
-		if (!scenes.containsKey(sceneId)) {
+	public void addDevice(int sceneId, ZWaveSceneDevice d) {
+		if (!sceneManagerStore.containsKey(sceneId)) {
 			logger.error("Invalid sceneId {}", sceneId);
 			return;
 		}
-		ZWaveScene zTemp = scenes.get(sceneId);
-		zTemp.addDevice(nodeId, d);
-		scenes.put(nodeId, zTemp);
+		
+		ZWaveScene scene = sceneManagerStore.get(sceneId);
+		scene.addDevice(d);
+		sceneManagerStore.put(sceneId, scene);
 	}
 
 	public HashMap<Integer, ZWaveSceneDevice> getDevices(int sceneId) {
-		if (!scenes.containsKey(sceneId)) {
+		if (!sceneManagerStore.containsKey(sceneId)) {
 			logger.error("Invalid sceneId {}", sceneId);
 			return null;
 		}
 
-		ZWaveScene zTemp = scenes.get(sceneId);
+		ZWaveScene zTemp = sceneManagerStore.get(sceneId);
 		return zTemp.getDevices();
 	}
 
@@ -169,7 +186,7 @@ public class ZWaveSceneManager {
 	 * @return HashMap<Integer, ArrayList<ZWaveSceneDevice>> H<value, ZWaveSceneDeviceList>
 	 */
 	public HashMap<Integer, ArrayList<ZWaveSceneDevice>> groupDevicesByLevels(int sceneId) {
-		if (!scenes.containsKey(sceneId)) {
+		if (!sceneManagerStore.containsKey(sceneId)) {
 			logger.error("Invalid sceneId {}", sceneId);
 			return null;
 		}
@@ -178,7 +195,7 @@ public class ZWaveSceneManager {
 		HashMap<Integer, ArrayList<ZWaveSceneDevice>>  groups = new HashMap<Integer, ArrayList<ZWaveSceneDevice>>();
 
 		// Get scene devices
-		ZWaveScene zTemp = scenes.get(sceneId);
+		ZWaveScene zTemp = sceneManagerStore.get(sceneId);
 		HashMap<Integer, ZWaveSceneDevice> devices = zTemp.getDevices();
 
 		// Iterate all devices
@@ -207,4 +224,13 @@ public class ZWaveSceneManager {
 
 		return groups;
 	}
+	
+	@XStreamAlias("sceneManagerStore")
+	private class ZWaveSceneManagerStore extends HashMap<Integer, ZWaveScene> {		
+		private static final long serialVersionUID = 614162034025808031L;
+		ZWaveSceneManagerStore() {
+			super();
+		}
+	}
+	
 }
