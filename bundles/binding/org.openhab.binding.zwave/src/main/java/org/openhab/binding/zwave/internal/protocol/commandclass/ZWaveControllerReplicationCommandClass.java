@@ -8,6 +8,8 @@
  */
 package org.openhab.binding.zwave.internal.protocol.commandclass;
 
+import java.util.Arrays;
+
 import org.openhab.binding.zwave.internal.protocol.SerialMessage;
 import org.openhab.binding.zwave.internal.protocol.ZWaveController;
 import org.openhab.binding.zwave.internal.protocol.ZWaveEndpoint;
@@ -88,19 +90,6 @@ public class ZWaveControllerReplicationCommandClass extends ZWaveCommandClass {
 					this.getCommandClass().getKey()));
 		}
 	}
-
-	/**
-	 * Processes a CTRL_REPLICATION_TRANSFER_GROUP message.
-	 * @param serialMessage the incoming message to process.
-	 * @param offset the offset position from which to start message processing.
-	 * @param endpoint the endpoint or instance number this message is meant for.
-	 */
-	protected void processControllerReplicationTransferGroup(SerialMessage serialMessage, int offset, int endpoint) {
-        // skip frist byte with sequence number              
-        int groupId = serialMessage.getMessagePayloadByte(offset + 2);
-        int nodeId = serialMessage.getMessagePayloadByte(offset + 3);
-
-	}
 	
 	/**
 	 * Processes a CTRL_REPLICATION_TRANSFER_GROUP_NAME message.
@@ -108,11 +97,28 @@ public class ZWaveControllerReplicationCommandClass extends ZWaveCommandClass {
 	 * @param offset the offset position from which to start message processing.
 	 * @param endpoint the endpoint or instance number this message is meant for.
 	 */
-	protected void processControllerReplicationTransferGroupName(SerialMessage serialMessage, int offset, int endpoint) {
-        // skip frist byte with sequence number              
+	protected void processControllerReplicationTransferGroup(SerialMessage serialMessage, int offset, int endpoint) {
+        // skip first byte with sequence number              
         int groupId = serialMessage.getMessagePayloadByte(offset + 2);
         int nodeId = serialMessage.getMessagePayloadByte(offset + 3);
+        
+        logger.debug(String.format("Controller Replication Transfer Group - groupId = %d, nodeId = %s",groupId, nodeId));
+	}
 
+	/**
+	 * Processes a CTRL_REPLICATION_TRANSFER_GROUP message.
+	 * @param serialMessage the incoming message to process.
+	 * @param offset the offset position from which to start message processing.
+	 * @param endpoint the endpoint or instance number this message is meant for.
+	 */
+	protected void processControllerReplicationTransferGroupName(SerialMessage serialMessage, int offset, int endpoint) {
+        // skip first byte with sequence number              
+        int groupId = serialMessage.getMessagePayloadByte(offset + 2);
+        byte[] msg = serialMessage.getMessagePayload();
+        byte[] groupNameBytes = Arrays.copyOfRange(msg, offset + 3, msg.length);
+        String groupName = new String(groupNameBytes);
+        
+        logger.debug(String.format("Controller Replication Transfer Group Name - groupId = %d, groupName = %s",groupId, groupName));
 	}
 	
 	/**
@@ -122,10 +128,12 @@ public class ZWaveControllerReplicationCommandClass extends ZWaveCommandClass {
 	 * @param endpoint the endpoint or instance number this message is meant for.
 	 */
 	protected void processControllerReplicationTransferScene(SerialMessage serialMessage, int offset, int endpoint) {
-        // skip frist byte with sequence number              
-        int groupId = serialMessage.getMessagePayloadByte(offset + 2);
+        // skip first byte with sequence number              
+        int sceneId = serialMessage.getMessagePayloadByte(offset + 2);
         int nodeId = serialMessage.getMessagePayloadByte(offset + 3);
+        int level = serialMessage.getMessagePayloadByte(offset + 4);
 
+        logger.debug(String.format("Controller Replication Transfer Scene - sceneId = %d, nodeId = %d, level = %d",sceneId, nodeId, level));
 	}
 	
 	/**
@@ -135,11 +143,13 @@ public class ZWaveControllerReplicationCommandClass extends ZWaveCommandClass {
 	 * @param endpoint the endpoint or instance number this message is meant for.
 	 */
 	protected void processControllerReplicationTransferSceneName(SerialMessage serialMessage, int offset, int endpoint) {
-        // skip frist byte with sequence number              
-        int groupId = serialMessage.getMessagePayloadByte(offset + 2);
-        int nodeId = serialMessage.getMessagePayloadByte(offset + 3);
-
+        // skip first byte with sequence number              
+        int sceneId = serialMessage.getMessagePayloadByte(offset + 2);
+        
+        byte[] msg = serialMessage.getMessagePayload();
+        byte[] sceneNameBytes = Arrays.copyOfRange(msg, offset + 3, msg.length);
+        String sceneName = new String(sceneNameBytes);
+        
+        logger.debug(String.format("Controller Replication Transfer Scene Name - sceneId = %d, sceneName = %s",sceneId, sceneName));
 	}
-	
-	
 }
