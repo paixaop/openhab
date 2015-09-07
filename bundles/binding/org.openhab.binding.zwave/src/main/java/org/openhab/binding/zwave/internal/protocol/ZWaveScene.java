@@ -72,8 +72,8 @@ public class ZWaveScene {
 	 * @param d ZWaveSceneDevice with the values and node information to 
 	 * 		  set when scene is activated
 	 */
-	public void addDevice(int nodeId, ZWaveSceneDevice d) {
-		devices.put(nodeId, d);
+	public void addDevice(ZWaveSceneDevice d) {
+		devices.put(d.getNodeId(), d);
 	}
 
 	/**
@@ -86,7 +86,6 @@ public class ZWaveScene {
 
 		d.setNode(controller.getNode(nodeId));
 		d.setValue(value);
-
 		devices.put(nodeId, d);
 	}
 
