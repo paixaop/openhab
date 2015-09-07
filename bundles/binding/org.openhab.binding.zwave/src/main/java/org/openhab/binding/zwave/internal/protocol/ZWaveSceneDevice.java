@@ -57,6 +57,10 @@ public class ZWaveSceneDevice {
 		return node;
 	}
 
+	public int getNodeId() {
+		return node.getDeviceId();
+	}
+	
 	public boolean isSceneSupported() {
 		return sceneSupport;
 	}
