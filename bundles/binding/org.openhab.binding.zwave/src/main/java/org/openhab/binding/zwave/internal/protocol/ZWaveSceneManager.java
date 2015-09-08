@@ -9,6 +9,7 @@
 package org.openhab.binding.zwave.internal.protocol;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 
 import org.slf4j.Logger;
@@ -48,14 +49,17 @@ public class ZWaveSceneManager {
 	
 	// Hash of Z-Wave Home IDs as Keys and sceneManagerStore as Values
 	// sceneManagerStore are themselves a hash of scene ID as key and ZWaveScene values
-	private ZWaveSceneManagerStore sceneManagerStore = new ZWaveSceneManagerStore();
+	private ZWaveSceneManagerStore sceneManagerStore;
+	private ZWaveSceneControllerStore sceneControllerStore;
+	
 	
 	@XStreamOmitField
 	private ZWaveController controller;
 
 	ZWaveSceneManager(ZWaveController zController) {
 		controller = zController;
-		sceneManagerStore.clear();
+		sceneManagerStore = new ZWaveSceneManagerStore();
+		sceneControllerStore = new ZWaveSceneControllerStore();
 	}
 
 	/**
@@ -64,6 +68,59 @@ public class ZWaveSceneManager {
 	 */
 	public int numbersceneManagerStore() {
 		return sceneManagerStore.size();
+	}
+	
+	/**
+	 * Add a scene controller to the controller store and bind a scene to a button (groupID) on
+	 * said controller
+	 * @param sceneId ID of the Z-Wave Scene to bind to controller and button
+	 * @param nodeId ID of the scene controller node
+	 * @param groupId ID of the button which will be used to activate the scene
+	 */
+	public void addSceneController(int sceneId, int nodeId, int groupId) {
+		if (sceneControllerStore.containsKey(sceneId)) {
+			// Get all the controllers that can trigger the desired scene
+			HashMap<Integer, Integer>  sceneControllerButton = sceneControllerStore.get(sceneId);
+			
+			// bind button and controller 
+			sceneControllerButton.put(nodeId, groupId);
+			sceneControllerStore.put(sceneId, sceneControllerButton);
+		}
+		else {
+			HashMap<Integer, Integer>  sceneControllerButton = new HashMap<Integer, Integer>();
+			sceneControllerButton.put(nodeId, groupId);
+			sceneControllerStore.put(sceneId, sceneControllerButton);
+		}
+		logger.info("NODE {} Scene Controller Button {} assigned to Scene {}", nodeId, groupId, sceneId);
+	}
+	
+	/**
+	 * Remove a scene controller/button scene binding
+	 * @param sceneId
+	 * @param nodeId
+	 */
+	public void removeSceneController(int sceneId, int nodeId) {
+		if (sceneControllerStore.containsKey(sceneId)) {
+			logger.info("Removing Scene Controller {} from scene {}", sceneId, nodeId);
+		}
+		else {
+			logger.info("Scene Controller {} is not controlling scene {}. Ignoring", sceneId, nodeId);
+		}
+	}
+	
+	/**
+	 * Get the list of controllers that can control a scene
+	 * @param sceneId ID of the scene
+	 * @return Hash list of controllers' node IDs and button/group IDs
+	 */
+	public HashMap<Integer, Integer> getSceneControllers(int sceneId) {
+		if (sceneControllerStore.containsKey(sceneId)) {
+			return sceneControllerStore.get(sceneId);
+		}
+		else {
+			logger.info("Scene {} has no scene controllers bound to it.", sceneId);
+			return null;
+		}
 	}
 
 	/**
@@ -225,10 +282,31 @@ public class ZWaveSceneManager {
 		return groups;
 	}
 	
+	public Collection<ZwaveNodes> getSceneControllableNodes() {
+		Collection<ZWaveNodes> nodes = controller.getNodes();
+		
+	}
+	
+	/**
+	 * Program scene into Scene controllers and scene nodes
+	 * @param sceneId int the scene ID 
+	 */
+	public void saveScenesToNodes(int sceneId) {
+		
+	}
+	
 	@XStreamAlias("sceneManagerStore")
 	private class ZWaveSceneManagerStore extends HashMap<Integer, ZWaveScene> {		
 		private static final long serialVersionUID = 614162034025808031L;
 		ZWaveSceneManagerStore() {
+			super();
+		}
+	}
+	
+	@XStreamAlias("sceneControllerStore")
+	private class ZWaveSceneControllerStore extends HashMap<Integer, HashMap<Integer, Integer>> {		
+		private static final long serialVersionUID = -4610300876380231219L;
+		ZWaveSceneControllerStore() {
 			super();
 		}
 	}
