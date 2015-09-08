@@ -8,6 +8,7 @@
  */
 package org.openhab.binding.zwave.internal.protocol;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.slf4j.Logger;
@@ -34,20 +35,23 @@ public class ZWaveScene {
 	private int sceneId;
 	private ZWaveController controller;
 
-	private HashMap<Integer, ZWaveSceneDevice> devices = new HashMap<Integer, ZWaveSceneDevice>();
+	private HashMap<Integer, ZWaveSceneDevice> devices;
+	private ArrayList<ZWaveSceneController> sceneControllers;
 
 	ZWaveScene(ZWaveController zController) {
 		controller = zController;
 		sceneName = "";
 		sceneId = 0;
-		devices.clear();
+		devices = new HashMap<Integer, ZWaveSceneDevice>();
+		sceneControllers = new ArrayList<ZWaveSceneController>();
 	}
 
 	ZWaveScene(ZWaveController zController, int sId) {
 		controller = zController;
 		sceneName = "";
 		sceneId = sId;
-		devices.clear();
+		devices = new HashMap<Integer, ZWaveSceneDevice>();
+		sceneControllers = new ArrayList<ZWaveSceneController>();
 	}
 
 	public int getId() {
@@ -64,6 +68,14 @@ public class ZWaveScene {
 
 	public void setName(String newName) {
 		sceneName = newName;
+	}
+	
+	public void addSceneController(ZWaveSceneController sc) {
+		sceneControllers.add(sc);
+	}
+	
+	public void removeSceneController(ZWaveSceneController sc) {
+		sceneControllers.remove(sc);
 	}
 	
 	/**
