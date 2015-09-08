@@ -8,17 +8,20 @@
  */
 package org.openhab.binding.zwave.internal.protocol;
 
+import java.util.ArrayList;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass;
+import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveIndicatorCommandClass;
 import org.openhab.binding.zwave.internal.protocol.ZWaveDeviceClass.Specific;
 
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
 /**
- * This class provides a storage class for zwave scene devices
+ * This class provides a storage class for z-wave scene devices
  * This is then serialized to XML.
  *
  * @author Pedro Paixao
@@ -34,10 +37,11 @@ public class ZWaveSceneController {
 	private static final int COOPER = 0x001A;
 
 	private ZWaveNode node;
-	private int numberOfGroups;
 	private boolean isCooperController;
 	private boolean isPortable;
 	private ZWaveController controller;
+	private ArrayList<Integer> controlledScenes;
+	private int indicator;
 
 	/**
 	 * Constructor with just a Z-Wave controller object
@@ -72,10 +76,71 @@ public class ZWaveSceneController {
 	 */
 	private void init(ZWaveController ctrl, ZWaveNode newNode) {
 		controller = ctrl;
-		numberOfGroups = 0;
 		isCooperController = false;
 		isPortable = false;
+		indicator = 0;
 		setNode(newNode);
+		controlledScenes = new ArrayList<Integer>();	
+	}
+	
+	/**
+	 * Set a scene controller button to ON 
+	 * @param buttonId ID of the button that will be tuned on
+	 */
+	public void setButtonOn(int buttonId) {
+		indicator = indicator ^ ( 0x0001 << buttonId);
+	}
+	
+	/**
+	 * Set a scene controller button to OFF
+	 * @param buttonId ID of the button that will be tuned on
+	 */
+	public void setButtonOff(int buttonId) {
+		indicator = indicator & ~(0x0001 << buttonId);
+	}
+	
+	/**
+	 * check if button is on of off
+	 * @param buttonId
+	 * @return true if button is on, false if it is off
+	 */
+	public boolean isButtonOn(int buttonId) {
+		int b = indicator & (0x0001 << buttonId); 
+		if (b != 0) {
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Get the Indicator state for this controller
+	 * @return int 
+	 */
+	public int getIndicator() {
+		return indicator;
+	}
+	
+	/** 
+	 * Set the indicator status for this controller
+	 * @param newIndicator
+	 * @return int previous indicator status 
+	 */
+	public int setIndicator(int newIndicator) {
+		int previousIndicator = indicator;
+		indicator = newIndicator;
+		return previousIndicator;
+	}
+	
+	public void setNodeIndicator() {
+		ZWaveIndicatorCommandClass indicatorCmdClass = (ZWaveIndicatorCommandClass) node.getCommandClass(ZWaveCommandClass.CommandClass.INDICATOR);
+		SerialMessage serialMessage = indicatorCmdClass.setValueMessage(indicator);
+		controller.sendData(serialMessage);
+	}
+	
+	public void getNodeIndicator() {
+		ZWaveIndicatorCommandClass indicatorCmdClass = (ZWaveIndicatorCommandClass) node.getCommandClass(ZWaveCommandClass.CommandClass.INDICATOR);
+		indicatorCmdClass.getValueMessage(indicator);
+		// TODO: add event listner for INDICATOR_REPORT
 	}
 	
 	/**
