@@ -44,6 +44,8 @@ public class ZWaveIndicatorCommandClass extends ZWaveCommandClass implements ZWa
 	private static final int INDICATOR_GET = 0x02;
 	private static final int INDICATOR_REPORT = 0x03;
 
+	private int indicator;
+	
 	private boolean isGetSupported = true;
 
 	/**
@@ -55,6 +57,7 @@ public class ZWaveIndicatorCommandClass extends ZWaveCommandClass implements ZWa
 	public ZWaveIndicatorCommandClass(ZWaveNode node,
 			ZWaveController controller, ZWaveEndpoint endpoint) {
 		super(node, controller, endpoint);
+		indicator = 0;
 	}
 
 
@@ -103,9 +106,9 @@ public class ZWaveIndicatorCommandClass extends ZWaveCommandClass implements ZWa
 	 */
 	protected void processIndicatorReport(SerialMessage serialMessage, int offset,
 			int endpoint) {
-		int value = serialMessage.getMessagePayloadByte(offset + 1); 
-		logger.debug(String.format("NODE %d: Indicator report, value = 0x%02X", this.getNode().getNodeId(), value));
-		ZWaveCommandClassValueEvent zEvent = new ZWaveCommandClassValueEvent(this.getNode().getNodeId(), endpoint, this.getCommandClass(), value);
+		indicator = serialMessage.getMessagePayloadByte(offset + 1); 
+		logger.debug(String.format("NODE %d: Indicator report, value = 0x%02X", this.getNode().getNodeId(), indicator));
+		ZWaveCommandClassValueEvent zEvent = new ZWaveCommandClassValueEvent(this.getNode().getNodeId(), endpoint, this.getCommandClass(), indicator);
 		this.getController().notifyEventListeners(zEvent);
 	}
 
@@ -143,14 +146,14 @@ public class ZWaveIndicatorCommandClass extends ZWaveCommandClass implements ZWa
 	 * @param the level to set.
 	 * @return the serial message
 	 */
-	public SerialMessage setValueMessage(int value) {
+	public SerialMessage setValueMessage(int newIndicator) {
 		logger.debug("NODE {}: Creating new message for application command INDICATOR_SET", this.getNode().getNodeId());
 		SerialMessage result = new SerialMessage(this.getNode().getNodeId(), SerialMessageClass.SendData, SerialMessageType.Request, SerialMessageClass.SendData, SerialMessagePriority.Set);
     	byte[] newPayload = { 	(byte) this.getNode().getNodeId(), 
     							3, 
 								(byte) getCommandClass().getKey(), 
 								(byte) INDICATOR_SET,
-								(byte) value
+								(byte) newIndicator
 								};
     	result.setMessagePayload(newPayload);
     	return result;		
