@@ -11,6 +11,10 @@ package org.openhab.binding.zwave.internal.protocol;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.openhab.binding.zwave.internal.protocol.SerialMessage.SerialMessageClass;
+import org.openhab.binding.zwave.internal.protocol.SerialMessage.SerialMessagePriority;
+import org.openhab.binding.zwave.internal.protocol.SerialMessage.SerialMessageType;
+import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveAssociationCommandClass;
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveSceneActivationCommandClass;
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass.CommandClass;
 import org.slf4j.Logger;
@@ -171,10 +175,15 @@ public class ZWaveScene {
 				continue;
 			}
 
-			ArrayList<ZWaveSceneDevice> deviceList = new ArrayList<ZWaveSceneDevice>();
+			ArrayList<ZWaveSceneDevice> deviceList;
 
 			if (groups.containsKey(value)) {
+				// There's at least one device in the list already
 				deviceList = groups.get(value);
+			}
+			else {
+				// Add a new device list
+				deviceList = new ArrayList<ZWaveSceneDevice>();
 			}
 
 			deviceList.add(d);
@@ -202,13 +211,36 @@ public class ZWaveScene {
 		
 		return sceneActivationNodes;
 	}
-	
+		
 	/**
 	 * Program scene into Scene controllers and scene nodes
 	 */
-	public void program() {
-		HashMap<Integer, ArrayList<ZWaveSceneDevice>> nonSceneDevices = groupDevicesByLevels();
-		ArrayList<ZWaveNode> sceneDevices = getNodesSupportingSceneActivation();
+	public void programNonSceneCapableDevices(ZWaveSceneController sceneController) {
+		ZWaveNode node = sceneController.getNode();
+		if (node == null) {
+			logger.error("Scene Controller does not have Z-Wave node information. Set node first!");
+			return;
+		}
+		
+		// What device button, AKA group is going to be programmed.
+		int groupId = sceneControllerButtons.get(node.getNodeId());
+		
+		ZWaveAssociationCommandClass associationCmdClass = (ZWaveAssociationCommandClass) node.getCommandClass(CommandClass.ASSOCIATION);
+		
+		associationCmdClass.s
+		
+		HashMap<Integer, ArrayList<ZWaveSceneDevice>> basicDevices = groupDevicesByLevels();
+		//ArrayList<ZWaveNode> sceneDevices = getNodesSupportingSceneActivation();
+		
+		// First program all scene devices that do not support SCENE ACTIVATION Command Class
+		if(!basicDevices.isEmpty()) {
+			for(Integer value : basicDevices.keySet()) {
+				 for(ZWaveSceneDevice device : basicDevices.get(value)) {
+					 
+				 }
+			}
+		}
+		
 	}
 	
 	/**
