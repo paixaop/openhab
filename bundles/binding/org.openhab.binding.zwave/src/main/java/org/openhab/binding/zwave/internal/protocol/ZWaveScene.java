@@ -9,6 +9,7 @@
 package org.openhab.binding.zwave.internal.protocol;
 
 import java.util.HashMap;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
@@ -32,23 +33,34 @@ public class ZWaveScene {
 	private int sceneId;
 	private ZWaveController controller;
 
+	// Map nodes to scene controlled devices Hash<nodeId, sceneDevice>
 	private HashMap<Integer, ZWaveSceneDevice> devices;
+	
+	// map nodes to scene controller devices Hash<nodeId, sceneController>
 	private HashMap<Integer, ZWaveSceneController> sceneControllers;
+	
+	// Map nodes to node buttons Hash<nodeId, buttonID>
+	private HashMap<Integer, Integer> sceneControllerButtons;
 
 	ZWaveScene(ZWaveController zController) {
-		controller = zController;
-		sceneName = "";
-		sceneId = 0;
-		devices = new HashMap<Integer, ZWaveSceneDevice>();
-		sceneControllers = new HashMap<Integer, ZWaveSceneController>();
+		init(zController, 0, "");
 	}
-
+	
 	ZWaveScene(ZWaveController zController, int sId) {
+		init(zController, sId, "");
+	}
+	
+	ZWaveScene(ZWaveController zController, int sId, String name) {
+		init(zController, sId, name);
+	}
+	
+	private void init(ZWaveController zController, int sId, String name) {
 		controller = zController;
-		sceneName = "";
+		sceneName = name;
 		sceneId = sId;
 		devices = new HashMap<Integer, ZWaveSceneDevice>();
 		sceneControllers = new HashMap<Integer, ZWaveSceneController>();
+		sceneControllerButtons = new HashMap<Integer, Integer>();
 	}
 
 	public int getId() {
@@ -67,31 +79,70 @@ public class ZWaveScene {
 		sceneName = newName;
 	}
 	
-	public void putSceneController(ZWaveSceneController sc) {
-		
+	public void putSceneController(ZWaveSceneController sc, int button) {
 		ZWaveNode node = sc.getNode();
 		if (node != null) {
 			sceneControllers.put(node.getNodeId(), sc);
+			if (sc.isButtonIdValid(button)) {
+				logger.info("Node {} button {} bound to scene {}", node.getNodeId(), button, sceneId);
+				sceneControllerButtons.put(node.getNodeId(), button);
+			}
+			else {
+				logger.warn("Node {} attempt to bind an invalid button to scene controller.", node.getNodeId());
+			}
+			
 		}
 		else {
 			logger.warn("Scene Conotroller object does not have valid node information. Cannot add it to scene");
 		}
-		
 	}
-	
+		
 	public void removeSceneController(ZWaveSceneController sc) {
 		ZWaveNode node = sc.getNode();
 		if (node != null) {
 			sceneControllers.remove(node.getNodeId());
+			sceneControllerButtons.remove(node.getNodeId());
 		}
 		else {
 			logger.warn("Scene Conotroller object does not have valid node information. Cannot remove it to scene");
 		}
+	}
 	
+	public void removeSceneController(int nodeId) {
+		if (sceneControllers.containsKey(nodeId)) {
+			sceneControllers.remove(nodeId);
+			sceneControllerButtons.remove(nodeId);
+		}
+		else {
+			logger.warn("Scene Conotroller object does not have valid node information. Cannot remove it to scene");
+		}
+	}
+	
+	public HashMap<Integer, ZWaveSceneController> getSceneControllers() {
+		return sceneControllers;
 	}
 	
 	public ZWaveSceneController getSceneController(int nodeId) {
 		return sceneControllers.get(nodeId);
+	}
+	
+	public void activate() {
+		// Get all the controllers associated with scene
+ 		if (!sceneControllers.isEmpty()) {
+ 			logger.info("Scene {} is being activated", sceneId);
+ 			
+ 			// Iterate all nodes that can control this scene and update their button status to ON.
+ 			for (int nodeId : sceneControllerButtons.keySet()) {
+ 				int buttonId = sceneControllerButtons.get(nodeId);
+ 				
+ 				ZWaveSceneController sc = sceneControllers.get(nodeId);
+ 				sc.setButtonOn(buttonId);
+ 				sceneControllers.put(nodeId, sc);
+ 			} 			
+ 		}
+ 		else {
+ 			logger.info("Scene {} has no scene controllers bound to it.", sceneId);
+ 		}
 	}
 	
 	/**
