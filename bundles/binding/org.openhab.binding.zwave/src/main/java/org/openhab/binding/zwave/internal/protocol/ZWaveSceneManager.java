@@ -259,14 +259,6 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	}
 	
 	/**
-	 * Program scene into Scene controllers and scene nodes
-	 * @param sceneId int the scene ID 
-	 */
-	public void saveScenesToNodes(int sceneId) {
-		
-	}
-	
-	/**
 	 * Process Z-Wave events and if they are SCENE_ACTIVATION command class value events
 	 * extract the scene ID
 	 * @param Z-Wave Events from controller

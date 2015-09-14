@@ -151,7 +151,7 @@ public class ZWaveScene {
 	 * @param sceneId
 	 * @return HashMap<Integer, ArrayList<ZWaveSceneDevice>> H<value, ZWaveSceneDeviceList>
 	 */
-	public HashMap<Integer, ArrayList<ZWaveSceneDevice>> groupDevicesByLevels(int sceneId) {
+	public HashMap<Integer, ArrayList<ZWaveSceneDevice>> groupDevicesByLevels() {
 		// Init groups
 		HashMap<Integer, ArrayList<ZWaveSceneDevice>>  groups = new HashMap<Integer, ArrayList<ZWaveSceneDevice>>();
 
@@ -180,6 +180,13 @@ public class ZWaveScene {
 		}
 
 		return groups;
+	}
+	
+	/**
+	 * Program scene into Scene controllers and scene nodes
+	 */
+	public void program() {
+		HashMap<Integer, ArrayList<ZWaveSceneDevice>> nonSceneDevices = groupDevicesByLevels();
 	}
 	
 	/**
