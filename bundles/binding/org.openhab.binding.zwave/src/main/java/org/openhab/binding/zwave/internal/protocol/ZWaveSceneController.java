@@ -8,8 +8,6 @@
  */
 package org.openhab.binding.zwave.internal.protocol;
 
-import java.util.ArrayList;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
