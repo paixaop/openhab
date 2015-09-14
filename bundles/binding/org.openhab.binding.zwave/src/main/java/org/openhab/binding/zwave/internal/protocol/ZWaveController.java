@@ -130,6 +130,7 @@ public class ZWaveController {
 	private int ACKCount = 0;
 	private int OOFCount = 0;
 	private AtomicInteger timeOutCount = new AtomicInteger(0);
+	private ZWaveSceneManager sceneManager;
 
 	private boolean isConnected;
 
@@ -163,6 +164,9 @@ public class ZWaveController {
 			// sequence. This avoids protocol errors (CAN errors).
 			Timer initTimer = new Timer();
 			initTimer.schedule(new InitializeDelayTask(), 3000);
+			
+			// Initialize the scene manager
+			sceneManager = new ZWaveSceneManager(this);
 	}
 
 	private class InitializeDelayTask extends TimerTask {
@@ -1004,6 +1008,15 @@ public class ZWaveController {
 	public ZWaveDeviceType getControllerType() {
 		return controllerType;
 	}
+	
+	/**
+	 * Get the scene manager object that is registered in the controller
+	 * @return scene manager object
+	 */
+	public ZWaveSceneManager getSceneManager() {
+		return sceneManager;
+	}
+	
 
 	/**
 	 * Gets the networks SUC controller ID.
