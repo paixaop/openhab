@@ -43,6 +43,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 	private ZWaveIndicatorCommandClass indicatorCmdClass;
 	private byte indicator;
 	private boolean indicatorValid;
+	private int numberOfButtons;
 
 	/**
 	 * Constructor with just a Z-Wave controller object
@@ -79,6 +80,10 @@ public class ZWaveSceneController implements ZWaveEventListener {
 		controller = ctrl;
 		isCooperController = false;
 		isPortable = false;
+		node = null;
+		
+		// TODO: need to calculate this from number of association groups or something else.
+		numberOfButtons = 5;
 		
 		// Initialize the internal indicator state, and set it as invalid
 		// until we get an INDICATOR Command Class Report from the device
@@ -129,6 +134,34 @@ public class ZWaveSceneController implements ZWaveEventListener {
 			return true;
 		}
 		return false;
+	}
+	
+	/**
+	 * Check if an int value is a valid ID for a controller button
+	 * @param button
+	 * @return true if button is valid
+	 */
+	public boolean isButtonIdValid(int id) {
+		if (id > 0 && id < numberOfButtons) {
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Set the number of valid buttons
+	 * @param n
+	 */
+	public void setNumberOfButtons(int n) {
+		numberOfButtons = n;
+	}
+	
+	/**
+	 * Get the number of valid buttons
+	 * @return
+	 */
+	public int getNumberOfButtons() {
+		return numberOfButtons;
 	}
 	
 	/**
@@ -222,7 +255,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 	 */
 	public void setNode(ZWaveNode n) {
 		
-		if (n==null) {
+		if (n == null) {
 			logger.debug("Node cannot be null. Ignoring.");
 			return;
 		}
