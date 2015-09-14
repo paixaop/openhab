@@ -22,6 +22,7 @@ import org.openhab.binding.zwave.internal.protocol.ZWaveNode;
 import org.openhab.binding.zwave.internal.protocol.SerialMessage.SerialMessageClass;
 import org.openhab.binding.zwave.internal.protocol.SerialMessage.SerialMessagePriority;
 import org.openhab.binding.zwave.internal.protocol.SerialMessage.SerialMessageType;
+import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass.CommandClass;
 import org.openhab.binding.zwave.internal.protocol.event.ZWaveEvent;
 import org.openhab.binding.zwave.internal.protocol.event.ZWaveNetworkEvent;
 import org.slf4j.Logger;
@@ -259,6 +260,35 @@ public class ZWaveAssociationCommandClass extends ZWaveCommandClass
 		result.setMessagePayload(newPayload);
 		return result;
 	}
+	
+	/**
+	 * Gets a SerialMessage with the ASSOCIATIONCMD_SET command
+	 * 
+	 * @param group
+	 *            the association group
+	 * @param nodes
+	 *            the list of nodes to add to the specified group
+	 * @return the serial message
+	 */
+	public SerialMessage setAssociationMessage(int group, byte[] nodes) {
+		logger.debug("NODE {}: Creating new message for application command ASSOCIATIONCMD_SET", this.getNode()
+				.getNodeId());
+		SerialMessage result = new SerialMessage(this.getNode().getNodeId(), SerialMessageClass.SendData,
+				SerialMessageType.Request, SerialMessageClass.SendData, SerialMessagePriority.Config);
+
+		byte[] newPayload = new byte[ 5 + nodes.length]; 
+		 
+		newPayload[0] = (byte) this.getNode().getNodeId(); 
+		newPayload[1] = (byte) (3 + nodes.length); 
+		newPayload[2] = (byte) getCommandClass().getKey();
+		newPayload[3] = (byte) ASSOCIATIONCMD_SET; 
+		newPayload[4] = (byte) (group & 0xff);
+		
+		System.arraycopy(nodes, 0, newPayload, 5, nodes.length);
+		
+		result.setMessagePayload(newPayload);
+		return result;
+	}
 
 	/**
 	 * Gets a SerialMessage with the ASSOCIATIONCMD_REMOVE command
@@ -280,6 +310,31 @@ public class ZWaveAssociationCommandClass extends ZWaveCommandClass
 
 		result.setMessagePayload(newPayload);
 		return result;
+	}
+	
+	/**
+	 * Remove all associated nodes from an association group.
+	 * @param group
+	 *            the association group
+	 * @param node
+	 *            the node to add to the specified group
+	 * @return the serial message
+	 */
+	public SerialMessage removeAllAssociatedNodesMessage(int group, int node) {
+		logger.debug("NODE {}: Remove all nodes from Association group {}", this.getNode().getNodeId(), group);
+		SerialMessage message = new SerialMessage(this.getNode().getNodeId(), SerialMessageClass.SendData,
+				SerialMessageType.Request, SerialMessageClass.SendData, SerialMessagePriority.Config);
+
+		byte[] newPayload = { 
+				(byte) this.getNode().getNodeId(), 
+				3, 
+				(byte) getCommandClass().getKey(),
+				(byte) ASSOCIATIONCMD_REMOVE, 
+				(byte) (group & 0xff)
+		};
+
+		message.setMessagePayload(newPayload);
+		return message;
 	}
 	
 	/**
