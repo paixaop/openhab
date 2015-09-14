@@ -81,20 +81,21 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	 * @param groupId ID of the button which will be used to activate the scene
 	 */
 	public void addSceneController(int sceneId, int nodeId, int groupId) {
-		if (sceneControllerStore.containsKey(sceneId)) {
-			// Get all the controllers that can trigger the desired scene
-			HashMap<Integer, Integer>  sceneControllerButton = sceneControllerStore.get(sceneId);
-			
-			// bind button and controller 
-			sceneControllerButton.put(nodeId, groupId);
-			sceneControllerStore.put(sceneId, sceneControllerButton);
+		ZWaveScene scene = new ZWaveScene(controller, sceneId);
+		
+		if (sceneManagerStore.containsKey(sceneId)) {
+			scene = sceneManagerStore.get(sceneId);
+		}
+		
+		ZWaveSceneController sc = new ZWaveSceneController(controller, nodeId);
+		if (sc.getNode() != null) {
+			scene.putSceneController(sc, groupId);
+			sceneManagerStore.put(sceneId, scene);
+			logger.info("NODE {} Scene Controller Button {} assigned to Scene {}", nodeId, groupId, sceneId);
 		}
 		else {
-			HashMap<Integer, Integer>  sceneControllerButton = new HashMap<Integer, Integer>();
-			sceneControllerButton.put(nodeId, groupId);
-			sceneControllerStore.put(sceneId, sceneControllerButton);
+			logger.error("NODE {} is not a scene controller. Ignoring", nodeId);
 		}
-		logger.info("NODE {} Scene Controller Button {} assigned to Scene {}", nodeId, groupId, sceneId);
 	}
 	
 	/**
@@ -103,8 +104,11 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	 * @param nodeId
 	 */
 	public void removeSceneController(int sceneId, int nodeId) {
-		if (sceneControllerStore.containsKey(sceneId)) {
+		if (sceneManagerStore.containsKey(sceneId)) {
 			logger.info("Removing Scene Controller {} from scene {}", sceneId, nodeId);
+			ZWaveScene scene = sceneManagerStore.get(sceneId);
+			scene.removeSceneController(nodeId);
+			sceneManagerStore.put(sceneId, scene);
 		}
 		else {
 			logger.info("Scene Controller {} is not controlling scene {}. Ignoring", sceneId, nodeId);
@@ -116,12 +120,12 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	 * @param sceneId ID of the scene
 	 * @return Hash list of controllers' node IDs and button/group IDs
 	 */
-	public HashMap<Integer, Integer> getSceneControllers(int sceneId) {
-		if (sceneControllerStore.containsKey(sceneId)) {
-			return sceneControllerStore.get(sceneId);
+	public HashMap<Integer, ZWaveSceneController> getSceneControllers(int sceneId) {
+		if (sceneManagerStore.containsKey(sceneId)) {
+			return sceneManagerStore.get(sceneId).getSceneControllers();
 		}
 		else {
-			logger.info("Scene {} has no scene controllers bound to it.", sceneId);
+			logger.info("Scene {} does not exist.", sceneId);
 			return null;
 		}
 	}
@@ -290,34 +294,11 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	 * @param sceneId
 	 */
 	public void activateScene(int sceneId) {
-		
-		// get the scene object
-		ZWaveScene scene = sceneManagerStore.get(sceneId);
-		if (scene == null) {
-			logger.info("Scene {} not found. Cannot activate it", sceneId);
+		if (sceneManagerStore.containsKey(sceneId)) {
+			sceneManagerStore.get(sceneId).activate();
 			return;
 		}
-		
-		// Get all the controllers associated with scene
-		HashMap<Integer, Integer> sceneControllers = getSceneControllers(sceneId);
- 		if (sceneControllers != null) {
- 			
- 			// Iterate all nodes that can control this scene and update their button status to ON.
- 			for (int nodeId : sceneControllers.keySet()) {
- 				int buttonId = sceneControllers.get(nodeId);
- 				
- 				ZWaveSceneController sc = scene.getSceneController(nodeId);
- 				sc.setButtonOn(buttonId);
- 				scene.putSceneController(sc);
- 			}
- 			
- 			// Save changes if any
- 			sceneManagerStore.put(sceneId, scene);
- 			
- 		}
- 		else {
- 			logger.info("Scene {} has no scene controllers bound to it.", sceneId);
- 		}
+		logger.info("Scene {} not found. Cannot activate it", sceneId);
 	}
 	
 	/**
