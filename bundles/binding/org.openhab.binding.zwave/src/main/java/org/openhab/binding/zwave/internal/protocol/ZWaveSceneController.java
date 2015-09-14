@@ -14,8 +14,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass;
+import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass.CommandClass;
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveIndicatorCommandClass;
-import org.openhab.binding.zwave.internal.protocol.ZWaveDeviceClass.Specific;
+import org.openhab.binding.zwave.internal.protocol.event.ZWaveCommandClassValueEvent;
+import org.openhab.binding.zwave.internal.protocol.event.ZWaveEvent;
 
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
@@ -31,7 +33,7 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
 
 @XStreamAlias("zwaveSceneController")
-public class ZWaveSceneController {
+public class ZWaveSceneController implements ZWaveEventListener {
 	@XStreamOmitField
 	private static final Logger logger = LoggerFactory.getLogger(ZWaveSceneController.class);
 	private static final int COOPER = 0x001A;
@@ -40,8 +42,9 @@ public class ZWaveSceneController {
 	private boolean isCooperController;
 	private boolean isPortable;
 	private ZWaveController controller;
-	private ArrayList<Integer> controlledScenes;
-	private int indicator;
+	private ZWaveIndicatorCommandClass indicatorCmdClass;
+	private byte indicator;
+	private boolean indicatorValid;
 
 	/**
 	 * Constructor with just a Z-Wave controller object
@@ -78,9 +81,19 @@ public class ZWaveSceneController {
 		controller = ctrl;
 		isCooperController = false;
 		isPortable = false;
+		
+		// Initialize the internal indicator state, and set it as invalid
+		// until we get an INDICATOR Command Class Report from the device
 		indicator = 0;
+		indicatorValid = false;
+		
 		setNode(newNode);
-		controlledScenes = new ArrayList<Integer>();	
+		
+		ZWaveIndicatorCommandClass indicatorCmdClass = (ZWaveIndicatorCommandClass) node.getCommandClass(ZWaveCommandClass.CommandClass.INDICATOR);
+		if (indicatorCmdClass != null) {
+			controller.addEventListener(this);
+			getNodeIndicator();
+		}
 	}
 	
 	/**
@@ -88,7 +101,11 @@ public class ZWaveSceneController {
 	 * @param buttonId ID of the button that will be tuned on
 	 */
 	public void setButtonOn(int buttonId) {
-		indicator = indicator ^ ( 0x0001 << buttonId);
+		// If button is already ON do nothing!
+		if (!isButtonOn(buttonId)) {
+			indicator = (byte) (indicator ^ ( 0x01 << buttonId));
+			setNodeIndicator();
+		}
 	}
 	
 	/**
@@ -96,16 +113,20 @@ public class ZWaveSceneController {
 	 * @param buttonId ID of the button that will be tuned on
 	 */
 	public void setButtonOff(int buttonId) {
-		indicator = indicator & ~(0x0001 << buttonId);
+		// If button is already OFF do nothing!
+		if (isButtonOn(buttonId)) {
+			indicator = (byte) (indicator & ~(0x01 << buttonId));
+			setNodeIndicator();
+		}
 	}
 	
 	/**
-	 * check if button is on of off
+	 * check if button is ON of OFF
 	 * @param buttonId
-	 * @return true if button is on, false if it is off
+	 * @return true if button is ON, false if it is OFF
 	 */
 	public boolean isButtonOn(int buttonId) {
-		int b = indicator & (0x0001 << buttonId); 
+		int b = indicator & (0x01 << buttonId); 
 		if (b != 0) {
 			return true;
 		}
@@ -114,33 +135,87 @@ public class ZWaveSceneController {
 	
 	/**
 	 * Get the Indicator state for this controller
-	 * @return int 
+	 * @return indicator 
 	 */
-	public int getIndicator() {
+	public byte getIndicator() {
 		return indicator;
 	}
 	
 	/** 
 	 * Set the indicator status for this controller
 	 * @param newIndicator
-	 * @return int previous indicator status 
+	 * @return previous indicator status 
 	 */
-	public int setIndicator(int newIndicator) {
-		int previousIndicator = indicator;
+	public byte setIndicator(byte newIndicator) {
+		
+		if (indicator == newIndicator) {
+			return indicator;
+		}
+		
+		byte previousIndicator = indicator;
 		indicator = newIndicator;
+		setNodeIndicator();
 		return previousIndicator;
 	}
 	
+	/**
+	 * Send a Z-Wave INDICATOR Command Class SET message to the node
+	 * to set the value of the node's indicator.
+	 * This operation is asynchronous, and it will take some time to take effect
+	 */
 	public void setNodeIndicator() {
-		ZWaveIndicatorCommandClass indicatorCmdClass = (ZWaveIndicatorCommandClass) node.getCommandClass(ZWaveCommandClass.CommandClass.INDICATOR);
-		SerialMessage serialMessage = indicatorCmdClass.setValueMessage(indicator);
-		controller.sendData(serialMessage);
+		if (indicatorCmdClass != null) {
+			
+			// Indicator changed so internal value is no longer valid
+			indicatorValid = false;
+			
+			SerialMessage serialMessage = indicatorCmdClass.setValueMessage(indicator);
+			controller.sendData(serialMessage);
+			
+			// Send an INDICATOR GET message to later validate the state. 
+			getNodeIndicator();
+		}
+		else {
+			logger.info("NODE {} does not support indicator class, not sending SET INDICATOR message",node.getNodeId());
+		}
 	}
 	
+	/**
+	 * Send and GET INDICATOR message to the Z-Wave node to get node's indicator status
+	 * Getting the Indicator status is asynchronous, a Z-Wave INDICATOR report from the node
+	 * needs to be processed in order to get the node's indicator value. 
+	 * See {ZWaveIncomingEvent}
+	 */
 	public void getNodeIndicator() {
-		ZWaveIndicatorCommandClass indicatorCmdClass = (ZWaveIndicatorCommandClass) node.getCommandClass(ZWaveCommandClass.CommandClass.INDICATOR);
-		indicatorCmdClass.getValueMessage(indicator);
-		// TODO: add event listner for INDICATOR_REPORT
+		if (indicatorCmdClass != null) {
+			SerialMessage serialMessage = indicatorCmdClass.getValueMessage();
+			controller.sendData(serialMessage);
+		}
+		else {
+			logger.info("NODE {} does not support indicator class, not sending GET INDICATOR message",node.getNodeId());
+		}
+	}
+	
+	/**
+	 * Check if the internal indicator state is valid. INDICATOR SET and GET 
+	 * operations are asynchronous. So we need to wait until we receive an
+	 * INDICATOR REPORT message with the indicator value currently stored
+	 * in the real Z-Wave device.
+	 * Any operation that changes the indicator value will invalidate the state.
+	 * State will remain invalid until a REPORT message is received
+	 * 
+	 * @return true if the indicator state is valid and can be used
+	 */
+	public boolean isIndicatorSateValid() {
+		return indicatorValid;
+	}
+	
+	/**
+	 * Does the node support the INDICATOR Command Class
+	 * @return true if INDICATOR is supported
+	 */
+	public boolean isIndicatorSupported() {
+		return (indicatorCmdClass != null);
 	}
 	
 	/**
@@ -150,7 +225,7 @@ public class ZWaveSceneController {
 	public void setNode(ZWaveNode n) {
 		
 		if (n==null) {
-			logger.debug("Node cannot be null. Ignoring.", n.getNodeId());
+			logger.debug("Node cannot be null. Ignoring.");
 			return;
 		}
 		
@@ -210,9 +285,34 @@ public class ZWaveSceneController {
 	
 	/**
 	 * Is the device a portable scene controller or static
-	 * @return boolean true if device is a protable scene controller
+	 * @return boolean true if device is a portable scene controller
 	 */
 	public boolean isPortableController() {
 		return isPortable;
+	}
+	
+	/**
+	 * Process Z-Wave events and if they are INDICATOR command class value events
+	 * directed to this node extract the indicator value and validate internal state
+	 * @param Z-Wave Events from controller
+	 */
+	@Override
+	public void ZWaveIncomingEvent(ZWaveEvent event) {
+		
+		// Check if we got a Z-Wave Value Event
+		if (event instanceof ZWaveCommandClassValueEvent) {
+			ZWaveCommandClassValueEvent valueEvent = (ZWaveCommandClassValueEvent) event;
+			
+			// Is it an INDICATOR Command Class event for this node
+			if (valueEvent.getCommandClass() == CommandClass.INDICATOR &&
+				valueEvent.getNodeId() == node.getNodeId() ) {
+				
+				// get the indicator value from the event
+				indicator = ((Integer) valueEvent.getValue()).byteValue();
+				
+				// the indicator state is now valid
+				indicatorValid = true;
+			}
+		}
 	}
 }
