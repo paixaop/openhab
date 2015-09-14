@@ -52,8 +52,7 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	
 	// Hash of Z-Wave Home IDs as Keys and scenes as Values
 	// scenes are themselves a hash of scene ID as key and ZWaveScene values
-	private ZWaveSceneManagerStore sceneManagerStore;
-	private ZWaveSceneControllerStore sceneControllerStore;
+	private HashMap<Integer, ZWaveScene> sceneManagerStore;
 	
 	
 	@XStreamOmitField
@@ -61,8 +60,7 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 
 	ZWaveSceneManager(ZWaveController zController) {
 		controller = zController;
-		sceneManagerStore = new ZWaveSceneManagerStore();
-		sceneControllerStore = new ZWaveSceneControllerStore();
+		sceneManagerStore = new HashMap<Integer, ZWaveScene>();
 	}
 
 	/**
@@ -115,20 +113,7 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 		}
 	}
 	
-	/**
-	 * Get the list of controllers that can control a scene
-	 * @param sceneId ID of the scene
-	 * @return Hash list of controllers' node IDs and button/group IDs
-	 */
-	public HashMap<Integer, ZWaveSceneController> getSceneControllers(int sceneId) {
-		if (sceneManagerStore.containsKey(sceneId)) {
-			return sceneManagerStore.get(sceneId).getSceneControllers();
-		}
-		else {
-			logger.info("Scene {} does not exist.", sceneId);
-			return null;
-		}
-	}
+	
 
 	/**
 	 * Get the lowest scene ID that is free for usage
@@ -240,57 +225,11 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 			return null;
 		}
 
-		ZWaveScene zTemp = sceneManagerStore.get(sceneId);
-		return zTemp.getDevices();
+		return sceneManagerStore.get(sceneId).getDevices();
 	}
 
 	/**
-	 * Create groups of devices that do not support the  scene activation command class by value.
-	 * @param sceneId
-	 * @return HashMap<Integer, ArrayList<ZWaveSceneDevice>> H<value, ZWaveSceneDeviceList>
-	 */
-	public HashMap<Integer, ArrayList<ZWaveSceneDevice>> groupDevicesByLevels(int sceneId) {
-		if (!sceneManagerStore.containsKey(sceneId)) {
-			logger.error("Invalid sceneId {}", sceneId);
-			return null;
-		}
-
-		// Init groups
-		HashMap<Integer, ArrayList<ZWaveSceneDevice>>  groups = new HashMap<Integer, ArrayList<ZWaveSceneDevice>>();
-
-		// Get scene devices
-		ZWaveScene zTemp = sceneManagerStore.get(sceneId);
-		HashMap<Integer, ZWaveSceneDevice> devices = zTemp.getDevices();
-
-		// Iterate all devices
-		for( ZWaveSceneDevice d : devices.values()) {
-
-			// Get device value
-			int value = d.getValue();
-
-			// Does device support scene activation command class?
-			if (d.isSceneSupported()) {
-				// Scene activation command class supported no need to group
-				// Scene configuration for these devices is done directly with
-				// Scene Actuator Configuration command class.
-				continue;
-			}
-
-			ArrayList<ZWaveSceneDevice> deviceList = new ArrayList<ZWaveSceneDevice>();
-
-			if (groups.containsKey(value)) {
-				deviceList = groups.get(value);
-			}
-
-			deviceList.add(d);
-			groups.put((Integer) value, deviceList);
-		}
-
-		return groups;
-	}
-	
-	/**
-	 * 
+	 * Activate a Scene
 	 * @param sceneId
 	 */
 	public void activateScene(int sceneId) {
@@ -348,34 +287,6 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 				// the indicator state is now valid
 				activateScene(sceneId);
 			}
-		}
-	}
-	
-	@XStreamAlias("sceneManagerStore")
-	private class ZWaveSceneManagerStore extends HashMap<Integer, ZWaveScene> {		
-		private static final long serialVersionUID = 614162034025808031L;
-		ZWaveSceneManagerStore() {
-			super();
-		}
-	}
-	
-	/**
-	 * Store Scene Controller Data Store
-	 *  
-	 * sceneId.nodeId.groupId
-	 * 
-	 * sceneId -  ID of the scene that a controller can activate typically through a button press
-	 * nodeId  -  ID of the Z-Wave node of the scene controller  
-	 * groupId -  ID of the scene controller group, AKA, controller button
-	 * 
-	 * So this hash maps scenes to nodes and nodes to buttons on the scene controller.
-	 *
-	 */
-	@XStreamAlias("sceneControllerStore")
-	private class ZWaveSceneControllerStore extends HashMap<Integer, HashMap<Integer, Integer>> {		
-		private static final long serialVersionUID = -4610300876380231219L;
-		ZWaveSceneControllerStore() {
-			super();
 		}
 	}
 	
