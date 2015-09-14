@@ -8,6 +8,7 @@
  */
 package org.openhab.binding.zwave.internal.protocol;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.slf4j.Logger;
@@ -143,6 +144,42 @@ public class ZWaveScene {
  		else {
  			logger.info("Scene {} has no scene controllers bound to it.", sceneId);
  		}
+	}
+	
+	/**
+	 * Create groups of devices that do not support the  scene activation command class by value.
+	 * @param sceneId
+	 * @return HashMap<Integer, ArrayList<ZWaveSceneDevice>> H<value, ZWaveSceneDeviceList>
+	 */
+	public HashMap<Integer, ArrayList<ZWaveSceneDevice>> groupDevicesByLevels(int sceneId) {
+		// Init groups
+		HashMap<Integer, ArrayList<ZWaveSceneDevice>>  groups = new HashMap<Integer, ArrayList<ZWaveSceneDevice>>();
+
+		// Iterate all devices
+		for( ZWaveSceneDevice d : devices.values()) {
+
+			// Get device value
+			int value = d.getValue();
+
+			// Does device support scene activation command class?
+			if (d.isSceneSupported()) {
+				// Scene activation command class supported no need to group
+				// Scene configuration for these devices is done directly with
+				// Scene Actuator Configuration command class.
+				continue;
+			}
+
+			ArrayList<ZWaveSceneDevice> deviceList = new ArrayList<ZWaveSceneDevice>();
+
+			if (groups.containsKey(value)) {
+				deviceList = groups.get(value);
+			}
+
+			deviceList.add(d);
+			groups.put((Integer) value, deviceList);
+		}
+
+		return groups;
 	}
 	
 	/**
