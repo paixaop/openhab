@@ -11,6 +11,8 @@ package org.openhab.binding.zwave.internal.protocol;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveSceneActivationCommandClass;
+import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass.CommandClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.thoughtworks.xstream.annotations.XStreamAlias;
@@ -183,10 +185,30 @@ public class ZWaveScene {
 	}
 	
 	/**
+	 * Get a list of nodes that support the SCENE ACTIVATION command class
+	 * @return list of nodes
+	 */
+	public ArrayList<ZWaveNode> getNodesSupportingSceneActivation() {
+		
+		ArrayList<ZWaveNode> sceneActivationNodes = new ArrayList<ZWaveNode>();
+		
+		for(ZWaveSceneDevice device : devices.values()) {
+			ZWaveNode node = device.getNode();
+			ZWaveSceneActivationCommandClass sceneActivationCC = (ZWaveSceneActivationCommandClass)node.getCommandClass(CommandClass.SCENE_ACTIVATION);
+			if (sceneActivationCC != null) {
+				sceneActivationNodes.add(node);
+			}
+		}
+		
+		return sceneActivationNodes;
+	}
+	
+	/**
 	 * Program scene into Scene controllers and scene nodes
 	 */
 	public void program() {
 		HashMap<Integer, ArrayList<ZWaveSceneDevice>> nonSceneDevices = groupDevicesByLevels();
+		ArrayList<ZWaveNode> sceneDevices = getNodesSupportingSceneActivation();
 	}
 	
 	/**
