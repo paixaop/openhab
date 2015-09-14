@@ -8,18 +8,15 @@
  */
 package org.openhab.binding.zwave.internal.protocol;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
 /**
- * This class provides a storage class for zwave scenes
- * within the node class. This is then serialised to XML.
+ * This class provides a storage class for Z-Wave scenes
+ * within the node class. This is then serialized to XML.
  *
  * @author Pedro Paixao
  * @since 1.8.0
