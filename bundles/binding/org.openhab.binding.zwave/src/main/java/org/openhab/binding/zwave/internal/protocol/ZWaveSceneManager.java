@@ -12,6 +12,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 
+import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveSceneActivationCommandClass;
+import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveWakeUpCommandClass;
+import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass.CommandClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +48,7 @@ public class ZWaveSceneManager {
 	private static final Logger logger = LoggerFactory.getLogger(ZWaveSceneManager.class);
 
 	// Maximum number of sceneManagerStore supported by ZWave
-	private static final int MAX_NUMBER_OF_sceneManagerStore = 256;
+	private static final int MAX_NUMBER_OF_SCENES = 256;
 	
 	// Hash of Z-Wave Home IDs as Keys and sceneManagerStore as Values
 	// sceneManagerStore are themselves a hash of scene ID as key and ZWaveScene values
@@ -136,11 +139,11 @@ public class ZWaveSceneManager {
 				return i;
 			}
 		}
-		if (sceneManagerStore.size() < MAX_NUMBER_OF_sceneManagerStore) {
+		if (sceneManagerStore.size() < MAX_NUMBER_OF_SCENES) {
 			return sceneManagerStore.size() + 1;
 		}
 		else {
-			logger.info("Maximum number of sceneManagerStore ({})reached. Cannot add new sceneManagerStore until you delete some.", MAX_NUMBER_OF_sceneManagerStore);
+			logger.info("Maximum number of sceneManagerStore ({})reached. Cannot add new sceneManagerStore until you delete some.", MAX_NUMBER_OF_SCENES);
 			return -1;
 		}
 	}
@@ -158,7 +161,7 @@ public class ZWaveSceneManager {
 	 * @return sceneId in case the scene is successful added, 0 otherwise
 	 */
 	public int newScene(String newName) {
-		if (sceneManagerStore.size() < MAX_NUMBER_OF_sceneManagerStore) {
+		if (sceneManagerStore.size() < MAX_NUMBER_OF_SCENES) {
 			int sceneId = getLowestUnusedSceneId();
 			ZWaveScene zTemp = new ZWaveScene(controller, sceneId);
 			zTemp.setName(newName);
@@ -166,7 +169,7 @@ public class ZWaveSceneManager {
 			return sceneId;
 		}
 		else {
-			logger.info("Maximum number of sceneManagerStore ({})reached. Cannot add new sceneManagerStore until you delete some.", MAX_NUMBER_OF_sceneManagerStore);
+			logger.info("Maximum number of sceneManagerStore ({})reached. Cannot add new sceneManagerStore until you delete some.", MAX_NUMBER_OF_SCENES);
 			return 0;
 		}
 	}
@@ -282,9 +285,57 @@ public class ZWaveSceneManager {
 		return groups;
 	}
 	
-	public Collection<ZwaveNodes> getSceneControllableNodes() {
-		Collection<ZWaveNodes> nodes = controller.getNodes();
+	/**
+	 * 
+	 * @param sceneId
+	 */
+	public void activateScene(int sceneId) {
 		
+		// get the scene object
+		ZWaveScene scene = sceneManagerStore.get(sceneId);
+		if (scene == null) {
+			logger.info("Scene {} not found. Cannot activate it", sceneId);
+			return;
+		}
+		
+		// Get all the controllers associated with scene
+		HashMap<Integer, Integer> sceneControllers = getSceneControllers(sceneId);
+ 		if (sceneControllers != null) {
+ 			
+ 			// Iterate all nodes that can control this scene and update their button status to ON.
+ 			for (int nodeId : sceneControllers.keySet()) {
+ 				int buttonId = sceneControllers.get(nodeId);
+ 				
+ 				ZWaveSceneController sc = scene.getSceneController(nodeId);
+ 				sc.setButtonOn(buttonId);
+ 				scene.putSceneController(sc);
+ 			}
+ 			
+ 			// Save changes if any
+ 			sceneManagerStore.put(sceneId, scene);
+ 			
+ 		}
+ 		else {
+ 			logger.info("Scene {} has no scene controllers bound to it.", sceneId);
+ 		}
+	}
+	
+	/**
+	 * Get a list of nodes that support the SCENE ACTIVATION command class
+	 * @return list of nodes
+	 */
+	public ArrayList<ZWaveNode> getNodesSupportingSceneActivation() {
+		Collection<ZWaveNode> nodes = controller.getNodes();
+		ArrayList<ZWaveNode> sceneActivationNodes = new ArrayList<ZWaveNode>();
+		
+		for(ZWaveNode node : nodes) {
+			ZWaveSceneActivationCommandClass sceneActivationCC = (ZWaveSceneActivationCommandClass)node.getCommandClass(CommandClass.SCENE_ACTIVATION);
+			if (sceneActivationCC != null) {
+				sceneActivationNodes.add(node);
+			}
+		}
+		
+		return sceneActivationNodes;
 	}
 	
 	/**
@@ -303,6 +354,18 @@ public class ZWaveSceneManager {
 		}
 	}
 	
+	/**
+	 * Store Scene Controller Data Store
+	 *  
+	 * sceneId.nodeId.groupId
+	 * 
+	 * sceneId -  ID of the scene that a controller can activate typically through a button press
+	 * nodeId  -  ID of the Z-Wave node of the scene controller  
+	 * groupId -  ID of the scene controller group, AKA, controller button
+	 * 
+	 * So this hash maps scenes to nodes and nodes to buttons on the scene controller.
+	 *
+	 */
 	@XStreamAlias("sceneControllerStore")
 	private class ZWaveSceneControllerStore extends HashMap<Integer, HashMap<Integer, Integer>> {		
 		private static final long serialVersionUID = -4610300876380231219L;
