@@ -13,8 +13,9 @@ import java.util.Collection;
 import java.util.HashMap;
 
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveSceneActivationCommandClass;
-import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveWakeUpCommandClass;
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass.CommandClass;
+import org.openhab.binding.zwave.internal.protocol.event.ZWaveCommandClassValueEvent;
+import org.openhab.binding.zwave.internal.protocol.event.ZWaveEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +23,7 @@ import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
 /**
- * This class manages all zwave sceneManagerStore
+ * This class manages all Z-Wave Scenes
  * This is then serialized to XML.
  *
  * @author Pedro Paixao
@@ -33,25 +34,24 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
 /**
  * Z-Wave Scene Support
  * 
- * Scene Manager manages sceneManagerStore for one or more Z-Wave networks, each identified by its
- * own Home ID.
+ * Scene Manager manages scenes for one Z-Wave controller
  * 
- * Each Z-Wave network supports up to 255 sceneManagerStore, each with many devices or Z-Wave nodes.
+ * Each Z-Wave network supports up to 255 scenes, each with many devices or Z-Wave nodes.
  * Only nodes in the same network, i.e, same Home ID can participate in a scene.
  *   
  * @author Pedro Paixao
  */
 
 @XStreamAlias("zwaveSceneManager")
-public class ZWaveSceneManager {
+public class ZWaveSceneManager implements ZWaveEventListener {
 	@XStreamOmitField
 	private static final Logger logger = LoggerFactory.getLogger(ZWaveSceneManager.class);
 
-	// Maximum number of sceneManagerStore supported by ZWave
+	// Maximum number of scenes supported by ZWave
 	private static final int MAX_NUMBER_OF_SCENES = 256;
 	
-	// Hash of Z-Wave Home IDs as Keys and sceneManagerStore as Values
-	// sceneManagerStore are themselves a hash of scene ID as key and ZWaveScene values
+	// Hash of Z-Wave Home IDs as Keys and scenes as Values
+	// scenes are themselves a hash of scene ID as key and ZWaveScene values
 	private ZWaveSceneManagerStore sceneManagerStore;
 	private ZWaveSceneControllerStore sceneControllerStore;
 	
@@ -66,10 +66,10 @@ public class ZWaveSceneManager {
 	}
 
 	/**
-	 * Get the number of sceneManagerStore.
-	 * @return int number of registered sceneManagerStore.
+	 * Get the number of registered scenes.
+	 * @return number of registered scenes.
 	 */
-	public int numbersceneManagerStore() {
+	public int numberOfScenes() {
 		return sceneManagerStore.size();
 	}
 	
@@ -143,7 +143,7 @@ public class ZWaveSceneManager {
 			return sceneManagerStore.size() + 1;
 		}
 		else {
-			logger.info("Maximum number of sceneManagerStore ({})reached. Cannot add new sceneManagerStore until you delete some.", MAX_NUMBER_OF_SCENES);
+			logger.info("Maximum number of scenes ({}) reached. Cannot add new scenes until you delete some.", MAX_NUMBER_OF_SCENES);
 			return -1;
 		}
 	}
@@ -169,13 +169,13 @@ public class ZWaveSceneManager {
 			return sceneId;
 		}
 		else {
-			logger.info("Maximum number of sceneManagerStore ({})reached. Cannot add new sceneManagerStore until you delete some.", MAX_NUMBER_OF_SCENES);
+			logger.info("Maximum number of scenes ({})reached. Cannot add new scenes until you delete some.", MAX_NUMBER_OF_SCENES);
 			return 0;
 		}
 	}
 
 	/**
-	 * Delete scene. This sceneId becomes available for new sceneManagerStore.
+	 * Delete scene. This sceneId becomes available for new scenes.
 	 * @param sceneId
 	 */
 	public void removeScene(int sceneId) {
@@ -344,6 +344,30 @@ public class ZWaveSceneManager {
 	 */
 	public void saveScenesToNodes(int sceneId) {
 		
+	}
+	
+	/**
+	 * Process Z-Wave events and if they are SCENE_ACTIVATION command class value events
+	 * extract the scene ID
+	 * @param Z-Wave Events from controller
+	 */
+	@Override
+	public void ZWaveIncomingEvent(ZWaveEvent event) {
+		
+		// Check if we got a Z-Wave Value Event
+		if (event instanceof ZWaveCommandClassValueEvent) {
+			ZWaveCommandClassValueEvent valueEvent = (ZWaveCommandClassValueEvent) event;
+			
+			// Is it an INDICATOR Command Class event for this node
+			if (valueEvent.getCommandClass() == CommandClass.SCENE_ACTIVATION) {
+				
+				// get the indicator value from the event
+				int sceneId = ((Integer) valueEvent.getValue()).intValue();
+				
+				// the indicator state is now valid
+				activateScene(sceneId);
+			}
+		}
 	}
 	
 	@XStreamAlias("sceneManagerStore")
