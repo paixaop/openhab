@@ -36,14 +36,14 @@ public class ZWaveScene {
 	private ZWaveController controller;
 
 	private HashMap<Integer, ZWaveSceneDevice> devices;
-	private ArrayList<ZWaveSceneController> sceneControllers;
+	private HashMap<Integer, ZWaveSceneController> sceneControllers;
 
 	ZWaveScene(ZWaveController zController) {
 		controller = zController;
 		sceneName = "";
 		sceneId = 0;
 		devices = new HashMap<Integer, ZWaveSceneDevice>();
-		sceneControllers = new ArrayList<ZWaveSceneController>();
+		sceneControllers = new HashMap<Integer, ZWaveSceneController>();
 	}
 
 	ZWaveScene(ZWaveController zController, int sId) {
@@ -51,7 +51,7 @@ public class ZWaveScene {
 		sceneName = "";
 		sceneId = sId;
 		devices = new HashMap<Integer, ZWaveSceneDevice>();
-		sceneControllers = new ArrayList<ZWaveSceneController>();
+		sceneControllers = new HashMap<Integer, ZWaveSceneController>();
 	}
 
 	public int getId() {
@@ -70,12 +70,31 @@ public class ZWaveScene {
 		sceneName = newName;
 	}
 	
-	public void addSceneController(ZWaveSceneController sc) {
-		sceneControllers.add(sc);
+	public void putSceneController(ZWaveSceneController sc) {
+		
+		ZWaveNode node = sc.getNode();
+		if (node != null) {
+			sceneControllers.put(node.getNodeId(), sc);
+		}
+		else {
+			logger.warn("Scene Conotroller object does not have valid node information. Cannot add it to scene");
+		}
+		
 	}
 	
 	public void removeSceneController(ZWaveSceneController sc) {
-		sceneControllers.remove(sc);
+		ZWaveNode node = sc.getNode();
+		if (node != null) {
+			sceneControllers.remove(node.getNodeId());
+		}
+		else {
+			logger.warn("Scene Conotroller object does not have valid node information. Cannot remove it to scene");
+		}
+	
+	}
+	
+	public ZWaveSceneController getSceneController(int nodeId) {
+		return sceneControllers.get(nodeId);
 	}
 	
 	/**
