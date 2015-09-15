@@ -216,6 +216,11 @@ public class ZWaveScene {
 		}
 	}
 	
+	/**
+	 * Remove an existing scene controller, i.e., this controller can no longer
+	 * trigger this scene.
+	 * @param nodeId
+	 */
 	public void removeSceneController(int nodeId) {
 		if (sceneControllers.containsKey(nodeId)) {
 			sceneControllers.remove(nodeId);
