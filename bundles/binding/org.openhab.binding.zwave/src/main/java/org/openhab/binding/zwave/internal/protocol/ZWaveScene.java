@@ -316,28 +316,30 @@ public class ZWaveScene {
 	 * Get a list of nodes that support the SCENE ACTIVATION command class
 	 * @return list of nodes
 	 */
-	public ArrayList<ZWaveSceneDevice> getNodesSupportingSceneActivation() {
+	public ArrayList<Integer> getNodesSupportingSceneActivation() {
 		
-		ArrayList<ZWaveSceneDevice> sceneCapableDevices = new ArrayList<ZWaveSceneDevice>();
+		ArrayList<Integer> sceneCapableDevices = new ArrayList<Integer>();
 		
 		for(ZWaveSceneDevice device : devices.values()) {
 			ZWaveNode node = device.getNode();
 			ZWaveSceneActivationCommandClass sceneActivationCC = (ZWaveSceneActivationCommandClass)node.getCommandClass(CommandClass.SCENE_ACTIVATION);
 			if (sceneActivationCC != null) {
-				sceneCapableDevices.add(device);
+				sceneCapableDevices.add(device.getNodeId());
 			}
 		}
 		
 		return sceneCapableDevices;
 	}
 		
-	/**
-	 * Program scene into Scene controllers and scene nodes
-	 */
-	public void programNonSceneCapableDevices() {
-		
-		HashMap<Integer, ArrayList<Integer>> basicDevices = groupDevicesByLevels();
-		
+	private byte[] toByteArray(ArrayList<Integer> a) {
+		byte[] out = new byte[a.size()];
+		for(int i=0; i< a.size(); i++){
+			out[i] = a.get(i).byteValue();
+		}
+		return out;
+	}
+	
+	public void resetSceneControllerAssociations() {
 		// Iterate all scene controllers bound to this scene
 		for(ZWaveSceneController sceneController : sceneControllers.values()) {
 			
@@ -354,27 +356,43 @@ public class ZWaveScene {
 			ZWaveAssociationCommandClass associationCmdClass = (ZWaveAssociationCommandClass) node.getCommandClass(CommandClass.ASSOCIATION);
 			SerialMessage message = associationCmdClass.removeAllAssociatedNodesMessage(groupId, node.getNodeId());
 			controller.sendData(message);
+		}
+	}
+	
+	/**
+	 * Program scene into Scene controllers and scene nodes
+	 */
+	public void programSceneControllersWithNonSceneCapableDevices() {
+		
+		HashMap<Integer, ArrayList<Integer>> basicDevices = groupDevicesByLevels();
+		
+		// Iterate all scene controllers bound to this scene
+		for(ZWaveSceneController sceneController : sceneControllers.values()) {
 			
-			// Configuration Command Class
+			ZWaveNode node = sceneController.getNode();
+			if (node == null) {
+				logger.error("Scene Controller does not have Z-Wave node information. Set node first!");
+				return;
+			}
+			
+			// What device button, AKA group is going to be programmed.
+			int groupId = sceneControllerButtons.get(node.getNodeId());
+			 
+			ZWaveAssociationCommandClass associationCmdClass = (ZWaveAssociationCommandClass) node.getCommandClass(CommandClass.ASSOCIATION);
+			
 			ZWaveConfigurationCommandClass configurationCmdClass = (ZWaveConfigurationCommandClass) node.getCommandClass(CommandClass.CONFIGURATION);
 			
 			// First program all scene devices that do not support SCENE ACTIVATION Command Class
 			if(!basicDevices.isEmpty()) {
 				for(Integer value : basicDevices.keySet()) {
-					logger.info("NODE {} Program scene {} associations for group {}. Adding non scene capable nodes:", node.getNodeId(), sceneId, groupId);
+					logger.info("NODE {} Program scene {} associations for group {}. Adding non scene capable nodes: {}", node.getNodeId(), sceneId, groupId, basicDevices.get(value).toString());
+					
 					// Get nodes
-					byte[] nodes = new byte[basicDevices.get(value).size()];
-					ArrayList<Integer> nodeList = basicDevices.get(value);
-					for(int i=0; i< nodeList.size(); i++){
-						nodes[i] = nodeList.get(i).byteValue();
-						logger.info("  {}", nodes[i]);
-					}
+					byte[] nodes = toByteArray(basicDevices.get(value));
 					
 					// Set associations
-					
 					SerialMessage msg = associationCmdClass.setAssociationMessage(groupId, nodes);
 					controller.sendData(msg);
-					logger.info("NODE {} Association SET Message sent", node.getNodeId());
 					
 					// Configure the level to send to these nodes
 					ConfigurationParameter parameter = new ConfigurationParameter(groupId, value, 1);
@@ -386,7 +404,7 @@ public class ZWaveScene {
 		}
 	}
 	
-	public void programSceneCapableDevices() {
+	public void programSceneControllersWithSceneCapableDevices() {
 		
 		// Iterate all scene controllers bound to this scene
 		for(ZWaveSceneController sceneController : sceneControllers.values()) {
@@ -400,16 +418,26 @@ public class ZWaveScene {
 			// What device button, AKA group is going to be programmed.
 			int groupId = sceneControllerButtons.get(node.getNodeId());
 			
-			// Get scene configuration command class
 			ZWaveSceneControllerConfCommandClass sceneControllerCmdClass = (ZWaveSceneControllerConfCommandClass) node.getCommandClass(CommandClass.SCENE_CONTROLLER_CONF);
 			logger.info("NODE {} Program controller with scene {} group {} dimming duration: ", node.getNodeId(), sceneId, groupId, dimDurationToString());
 			SerialMessage msg = sceneControllerCmdClass.setValueMessage((byte)groupId, (byte)sceneId, dimmingDuration);
 			controller.sendData(msg);
-		}
-		
-		// Get all scene supporting nodes 
-		for(ZWaveSceneDevice device : getNodesSupportingSceneActivation()) {
 			
+			// Set associations
+			ZWaveAssociationCommandClass associationCmdClass = (ZWaveAssociationCommandClass) node.getCommandClass(CommandClass.ASSOCIATION);
+			ArrayList<Integer> sceneNodes = getNodesSupportingSceneActivation();
+			logger.info("NODE {} Program scene {} associations for group {}. Adding scene capable nodes: {}", node.getNodeId(), sceneId, groupId, sceneNodes.toString());
+			
+			byte[] nodes = toByteArray(sceneNodes);
+			msg = associationCmdClass.setAssociationMessage(groupId, nodes);
+			controller.sendData(msg);
+		}
+	}
+	
+	public void programSceneCapableNodes() {
+		// Get all scene supporting nodes 
+		for(Integer nodeId : getNodesSupportingSceneActivation()) {
+			ZWaveSceneDevice device = devices.get(nodeId);
 			ZWaveNode node = device.getNode();
 			if( node == null) {
 				logger.error("Programming scene capable devices. Device has no node information");
@@ -428,8 +456,10 @@ public class ZWaveScene {
 	 * Program scenes into Z-Wave nodes
 	 */
 	public void program() {
-		programNonSceneCapableDevices();
-		programSceneCapableDevices();
+		resetSceneControllerAssociations();
+		programSceneControllersWithNonSceneCapableDevices();
+		programSceneControllersWithSceneCapableDevices();
+		programSceneCapableNodes();
 	}
 	
 	/**
