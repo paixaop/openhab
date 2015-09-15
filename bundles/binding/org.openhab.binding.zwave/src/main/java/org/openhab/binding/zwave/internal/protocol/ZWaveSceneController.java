@@ -341,6 +341,8 @@ public class ZWaveSceneController implements ZWaveEventListener {
 				// get the indicator value from the event
 				indicator = ((Integer) valueEvent.getValue()).byteValue();
 				
+				logger.info("NODE {} Indicator report event. Indicator {}", node.getNodeId(), indicator);
+				
 				// the indicator state is now valid
 				indicatorValid = true;
 			}
