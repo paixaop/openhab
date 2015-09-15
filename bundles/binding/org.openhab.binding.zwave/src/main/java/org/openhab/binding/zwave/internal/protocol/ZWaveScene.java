@@ -313,7 +313,7 @@ public class ZWaveScene {
 	 */
 	public ArrayList<ZWaveSceneDevice> getNodesSupportingSceneActivation() {
 		
-		ArrayList<ZWaveSceneDevice> sceneCapableDevices = new ArrayList<ZWaveNode>();
+		ArrayList<ZWaveSceneDevice> sceneCapableDevices = new ArrayList<ZWaveSceneDevice>();
 		
 		for(ZWaveSceneDevice device : devices.values()) {
 			ZWaveNode node = device.getNode();
