@@ -420,6 +420,14 @@ public class ZWaveScene {
 	}
 	
 	/**
+	 * Program scenes into Z-Wave nodes
+	 */
+	public void program() {
+		programNonSceneCapableDevices();
+		programSceneCapableDevices();
+	}
+	
+	/**
 	 * Convert the dimming duration to a string
 	 * @return the dimming time
 	 */
@@ -459,18 +467,37 @@ public class ZWaveScene {
 		devices.put(nodeId, d);
 	}
 
+	/**
+	 * Get device from node ID
+	 * @param nodeId
+	 * @return scene device
+	 */
 	public ZWaveSceneDevice getDevice(int nodeId) {
 		return devices.get(nodeId);
 	}
 
+	/**
+	 * Remove a device from the scene
+	 * @param nodeId
+	 */
 	public void removeDevice(int nodeId) {
 		devices.remove(nodeId);
 	}
 
+	/** 
+	 * Get all the devices that are part of the scene
+	 * @return 
+	 *    HashMap<Integer, ZWaveSceneDevice> with the nodeIds of every node in the scene, and the value is a SceneDevice
+	 */
 	public HashMap<Integer, ZWaveSceneDevice> getDevices() {
 		return devices;
 	}
 
+	/**
+	 * Add a value to an existing node.
+	 * @param nodeId
+	 * @param value
+	 */
 	public void addValue(int nodeId, byte value) {
 		ZWaveSceneDevice d = new ZWaveSceneDevice();
 		
