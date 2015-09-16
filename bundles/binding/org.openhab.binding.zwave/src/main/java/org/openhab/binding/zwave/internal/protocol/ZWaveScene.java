@@ -322,7 +322,11 @@ public class ZWaveScene {
 		
 		for(ZWaveSceneDevice device : devices.values()) {
 			ZWaveNode node = device.getNode();
-			ZWaveSceneActivationCommandClass sceneActivationCC = (ZWaveSceneActivationCommandClass)node.getCommandClass(CommandClass.SCENE_ACTIVATION);
+			if (node == null) {
+				logger.error("Scene {} has a device without node information", sceneId);
+				return null;
+			}
+			ZWaveSceneActivationCommandClass sceneActivationCC = (ZWaveSceneActivationCommandClass) node.getCommandClass(CommandClass.SCENE_ACTIVATION);
 			if (sceneActivationCC != null) {
 				sceneCapableDevices.add(device.getNodeId());
 			}
@@ -426,6 +430,11 @@ public class ZWaveScene {
 			// Set associations
 			ZWaveAssociationCommandClass associationCmdClass = (ZWaveAssociationCommandClass) node.getCommandClass(CommandClass.ASSOCIATION);
 			ArrayList<Integer> sceneNodes = getNodesSupportingSceneActivation();
+			if (sceneNodes == null) {
+				logger.info("NODE {} Program scene {} has no nodes! Stopping scene programming.", node.getNodeId(), sceneId);
+				return;
+			}
+			
 			logger.info("NODE {} Program scene {} associations for group {}. Adding scene capable nodes: {}", node.getNodeId(), sceneId, groupId, sceneNodes.toString());
 			
 			byte[] nodes = toByteArray(sceneNodes);
@@ -436,7 +445,12 @@ public class ZWaveScene {
 	
 	public void programSceneCapableNodes() {
 		// Get all scene supporting nodes 
-		for(Integer nodeId : getNodesSupportingSceneActivation()) {
+		ArrayList<Integer> nodes = getNodesSupportingSceneActivation();
+		if (nodes == null) {
+			logger.info("Scene {} has no scene capable devices.", sceneId);
+			return;
+		}
+		for(Integer nodeId : nodes) {
 			ZWaveSceneDevice device = devices.get(nodeId);
 			ZWaveNode node = device.getNode();
 			if( node == null) {
@@ -486,7 +500,9 @@ public class ZWaveScene {
 	 * 		  set when scene is activated
 	 */
 	public void addDevice(ZWaveSceneDevice d) {
-		devices.put(d.getNodeId(), d);
+		if (d != null) {
+			devices.put(d.getNodeId(), d);
+		}
 	}
 
 	/**

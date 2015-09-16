@@ -282,7 +282,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 		
 		// Check if node supports scene activation
 		ZWaveCommandClass c = n.getCommandClass(ZWaveCommandClass.CommandClass.SCENE_CONTROLLER_CONF);
-		if (c != null) {
+		if (c == null) {
 			logger.error("NODE {} : This device does not support scene controller configuration command class and cannot be configured for scenes.", n.getNodeId());
 			return;
 		}

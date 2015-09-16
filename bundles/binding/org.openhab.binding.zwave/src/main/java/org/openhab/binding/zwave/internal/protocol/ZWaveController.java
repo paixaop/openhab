@@ -179,6 +179,7 @@ public class ZWaveController {
 		public void run() {
 			logger.debug("Initialising network");
 			initialize();
+			sceneManager.testScene();
 		}
 	}
 

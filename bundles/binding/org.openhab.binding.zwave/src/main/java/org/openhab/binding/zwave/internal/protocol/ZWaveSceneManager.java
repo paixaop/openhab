@@ -61,10 +61,9 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	ZWaveSceneManager(ZWaveController zController) {
 		controller = zController;
 		sceneManagerStore = new HashMap<Integer, ZWaveScene>();
-		testScene();
 	}
 	
-	private void testScene() {
+	public void testScene() {
 		int sceneId = newScene("test");
 		logger.info("Scene Manager Test Scene {}", sceneId);
 		addDevice(sceneId, 4, 50);
