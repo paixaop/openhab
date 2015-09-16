@@ -94,8 +94,12 @@ public class ZWaveSceneController implements ZWaveEventListener {
 		if (node != null) {
 			ZWaveIndicatorCommandClass indicatorCmdClass = (ZWaveIndicatorCommandClass) node.getCommandClass(ZWaveCommandClass.CommandClass.INDICATOR);
 			if (indicatorCmdClass != null) {
+				logger.info("NODE {} supports Indicator command class, add event listner and Indicator status", node.getNodeId());
 				controller.addEventListener(this);
 				getNodeIndicator();
+			}
+			else {
+				logger.info("NODE {} Does not support Indicator command class", node.getNodeId());
 			}
 		}
 	}
@@ -105,9 +109,15 @@ public class ZWaveSceneController implements ZWaveEventListener {
 	 * @param buttonId ID of the button that will be tuned on
 	 */
 	public void setButtonOn(int buttonId) {
+		if (!isButtonIdValid(buttonId)) {
+			logger.error("NODE {} invalid button {}", node.getNodeId(), buttonId);
+			return;
+		}
+		
 		// If button is already ON do nothing!
 		if (!isButtonOn(buttonId)) {
 			indicator = (byte) (indicator ^ ( 0x01 << buttonId));
+			logger.info("NODE {} setting button {} to ON. Indicator = {}", node.getNodeId(), buttonId, indicator);
 			setNodeIndicator();
 		}
 	}
@@ -117,9 +127,15 @@ public class ZWaveSceneController implements ZWaveEventListener {
 	 * @param buttonId ID of the button that will be tuned on
 	 */
 	public void setButtonOff(int buttonId) {
+		if (!isButtonIdValid(buttonId)) {
+			logger.error("NODE {} invalid button {}", node.getNodeId(), buttonId);
+			return;
+		}
+		
 		// If button is already OFF do nothing!
 		if (isButtonOn(buttonId)) {
 			indicator = (byte) (indicator & ~(0x01 << buttonId));
+			logger.info("NODE {} setting button {} to OFF. Indicator = {}", node.getNodeId(), buttonId, indicator);
 			setNodeIndicator();
 		}
 	}
@@ -130,6 +146,11 @@ public class ZWaveSceneController implements ZWaveEventListener {
 	 * @return true if button is ON, false if it is OFF
 	 */
 	public boolean isButtonOn(int buttonId) {
+		if (!isButtonIdValid(buttonId)) {
+			logger.error("NODE {} invalid button {}", node.getNodeId(), buttonId);
+			return;
+		}
+		
 		int b = indicator & (0x01 << buttonId); 
 		if (b != 0) {
 			return true;
@@ -187,6 +208,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 		byte previousIndicator = indicator;
 		indicator = newIndicator;
 		setNodeIndicator();
+		logger.info("NODE {} set indicator to {}", node.getNodeId(), indicator);
 		return previousIndicator;
 	}
 	
@@ -197,7 +219,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 	 */
 	public void setNodeIndicator() {
 		if (indicatorCmdClass != null) {
-			
+			logger.info("NODE {} send Indicator SET to node with indicator {}", node.getNodeId(), indicator);
 			// Indicator changed so internal value is no longer valid
 			indicatorValid = false;
 			
@@ -267,10 +289,12 @@ public class ZWaveSceneController implements ZWaveEventListener {
 			deviceClass.getSpecificDeviceClass() == ZWaveDeviceClass.Specific.SCENE_CONTROLLER) {
 			
 			if (deviceClass.getSpecificDeviceClass() == ZWaveDeviceClass.Specific.PORTABLE_SCENE_CONTROLLER) {
+				logger.info("NODE {} is a portable controller", node.getNodeId());
 				isPortable = true;
 			}
 			
 			if(n.getManufacturer() == COOPER) {
+				logger.info("NODE {} is a Cooper device", node.getNodeId());
 				isCooperController = true;
 			}
 			
@@ -280,7 +304,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 			return;
 		}
 		
-		// Check if node supports scene activation
+		// Check if node supports scene configuration
 		ZWaveCommandClass c = n.getCommandClass(ZWaveCommandClass.CommandClass.SCENE_CONTROLLER_CONF);
 		if (c == null) {
 			logger.error("NODE {} : This device does not support scene controller configuration command class and cannot be configured for scenes.", n.getNodeId());
