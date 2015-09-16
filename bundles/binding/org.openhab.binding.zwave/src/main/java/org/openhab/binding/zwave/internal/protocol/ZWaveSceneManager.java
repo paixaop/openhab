@@ -270,7 +270,13 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	public void activateScene(int sceneId) {
 		if (sceneManagerStore.containsKey(sceneId)) {
 			logger.info("Scene {} found. Activating it.", sceneId);
-			sceneManagerStore.get(sceneId).activate();
+			ZWaveScene scene = sceneManagerStore.get(sceneId);
+			if (scene != null) {
+				scene.activate();
+			}
+			else {
+				logger.error("Scene {} was found yet its object was null", sceneId);
+			}
 			return;
 		}
 		logger.info("Scene {} not found. Cannot activate it", sceneId);

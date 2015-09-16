@@ -148,13 +148,14 @@ public class ZWaveSceneController implements ZWaveEventListener {
 	public boolean isButtonOn(int buttonId) {
 		if (!isButtonIdValid(buttonId)) {
 			logger.error("NODE {} invalid button {}", node.getNodeId(), buttonId);
-			return;
+			return false;
 		}
 		
 		int b = indicator & (0x01 << buttonId); 
 		if (b != 0) {
 			return true;
 		}
+		
 		return false;
 	}
 	
@@ -289,12 +290,12 @@ public class ZWaveSceneController implements ZWaveEventListener {
 			deviceClass.getSpecificDeviceClass() == ZWaveDeviceClass.Specific.SCENE_CONTROLLER) {
 			
 			if (deviceClass.getSpecificDeviceClass() == ZWaveDeviceClass.Specific.PORTABLE_SCENE_CONTROLLER) {
-				logger.info("NODE {} is a portable controller", node.getNodeId());
+				logger.info("NODE {} is a portable controller", n.getNodeId());
 				isPortable = true;
 			}
 			
 			if(n.getManufacturer() == COOPER) {
-				logger.info("NODE {} is a Cooper device", node.getNodeId());
+				logger.info("NODE {} is a Cooper device", n.getNodeId());
 				isCooperController = true;
 			}
 			
