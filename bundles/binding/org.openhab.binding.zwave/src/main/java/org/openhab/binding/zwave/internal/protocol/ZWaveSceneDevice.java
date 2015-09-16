@@ -42,7 +42,11 @@ public class ZWaveSceneDevice {
 	}
 
 	public void setNode(ZWaveNode n) {
-		logger.debug("Set Node {}", n.getNodeId());
+		if (n == null) {
+			return;
+		}
+		
+		logger.debug("Scene Device Set Node to {}", n.getNodeId());
 		node = n;
 
 		// Check if node supports scene activation
@@ -67,11 +71,11 @@ public class ZWaveSceneDevice {
 
 	public void setValue(byte v) {
 		if (node == null) {
-			logger.error("Trying to set a value of a NULL node. Set node first");
+			logger.error("Scene Device trying to set a value of a NULL node. Set node first");
 			return;
 		}
 
-		logger.debug("Set Node {} value to {}", node.getNodeId(), v);
+		logger.debug("Scene Device set Node {} value to {}", node.getNodeId(), v);
 
 		value = v;
 	}
