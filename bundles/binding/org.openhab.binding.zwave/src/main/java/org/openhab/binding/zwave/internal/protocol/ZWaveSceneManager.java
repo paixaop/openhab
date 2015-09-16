@@ -61,6 +61,39 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	ZWaveSceneManager(ZWaveController zController) {
 		controller = zController;
 		sceneManagerStore = new HashMap<Integer, ZWaveScene>();
+		testScene();
+	}
+	
+	private void testScene() {
+		int sceneId = newScene("test");
+		logger.info("Scene Manager Test Scene {}", sceneId);
+		addDevice(sceneId, 4, 50);
+		addSceneController(sceneId, 2, 1);
+		addSceneController(sceneId, 3, 1);
+		getScene("test").program();
+	}
+	
+	/**
+	 * Get a scene object from the manager by scene ID
+	 * @param id of the scene
+	 * @return ZWaveScene
+	 */
+	public ZWaveScene getScene(int id) {
+		return sceneManagerStore.get(id);
+	}
+	
+	/**
+	 * Get a scene object from the manager by name
+	 * @param name of the scene
+	 * @return ZWaveScene
+	 */
+	public ZWaveScene getScene(String name) {
+		for(ZWaveScene s : sceneManagerStore.values()) {
+			if (s.getName() == name) {
+				return s;
+			}
+		}
+		return null;
 	}
 
 	/**
@@ -79,12 +112,13 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	 * @param groupId ID of the button which will be used to activate the scene
 	 */
 	public void addSceneController(int sceneId, int nodeId, int groupId) {
-		ZWaveScene scene = new ZWaveScene(controller, sceneId);
 		
-		if (sceneManagerStore.containsKey(sceneId)) {
-			scene = sceneManagerStore.get(sceneId);
+		if (!sceneManagerStore.containsKey(sceneId)) {
+			logger.error("Scene {} not found. Cannot add scene controller {} to it., sceneId, nodeId");
+			return;
 		}
 		
+		ZWaveScene scene = sceneManagerStore.get(sceneId);
 		ZWaveSceneController sc = new ZWaveSceneController(controller, nodeId);
 		if (sc.getNode() != null) {
 			scene.putSceneController(sc, groupId);
@@ -92,7 +126,7 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 			logger.info("NODE {} Scene Controller Button {} assigned to Scene {}", nodeId, groupId, sceneId);
 		}
 		else {
-			logger.error("NODE {} is not a scene controller. Ignoring", nodeId);
+			logger.error("NODE {} is not a scene controller. Cannot add it to scene {}", nodeId, sceneId);
 		}
 	}
 	
@@ -191,14 +225,14 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 		sceneManagerStore.put(sceneId, scene);
 	}
 
-	public void addDevice(int sceneId, int nodeId, byte value) {
+	public void addDevice(int sceneId, int nodeId, int value) {
 		if (!sceneManagerStore.containsKey(sceneId)) {
 			logger.error("Invalid sceneId {}", sceneId);
 			return;
 		}
 		
 		ZWaveScene scene = sceneManagerStore.get(sceneId);
-		scene.addDevice(nodeId, value);
+		scene.addDevice(nodeId, (byte) value);
 		sceneManagerStore.put(sceneId, scene);
 	}
 
