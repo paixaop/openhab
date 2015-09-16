@@ -91,11 +91,12 @@ public class ZWaveSceneController implements ZWaveEventListener {
 		indicatorValid = false;
 		
 		setNode(newNode);
-		
-		ZWaveIndicatorCommandClass indicatorCmdClass = (ZWaveIndicatorCommandClass) node.getCommandClass(ZWaveCommandClass.CommandClass.INDICATOR);
-		if (indicatorCmdClass != null) {
-			controller.addEventListener(this);
-			getNodeIndicator();
+		if (node != null) {
+			ZWaveIndicatorCommandClass indicatorCmdClass = (ZWaveIndicatorCommandClass) node.getCommandClass(ZWaveCommandClass.CommandClass.INDICATOR);
+			if (indicatorCmdClass != null) {
+				controller.addEventListener(this);
+				getNodeIndicator();
+			}
 		}
 	}
 	
