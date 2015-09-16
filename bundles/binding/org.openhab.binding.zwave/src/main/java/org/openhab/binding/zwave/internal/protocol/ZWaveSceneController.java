@@ -287,7 +287,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 			return;
 		}
 		
-		logger.debug("Scene Controller Set Node {}", n.getNodeId());
+		logger.debug("NODE {} set Scene Controller for scene {}", n.getNodeId());
 		node = n;
 	}
 	

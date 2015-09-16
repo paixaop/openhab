@@ -423,7 +423,7 @@ public class ZWaveScene {
 			int groupId = sceneControllerButtons.get(node.getNodeId());
 			
 			ZWaveSceneControllerConfCommandClass sceneControllerCmdClass = (ZWaveSceneControllerConfCommandClass) node.getCommandClass(CommandClass.SCENE_CONTROLLER_CONF);
-			logger.info("NODE {} Program controller with scene {} group {} dimming duration: ", node.getNodeId(), sceneId, groupId, dimDurationToString());
+			logger.info("NODE {} Program controller with scene {} group {} dimming duration: {}", node.getNodeId(), sceneId, groupId, dimDurationToString());
 			SerialMessage msg = sceneControllerCmdClass.setValueMessage((byte)groupId, (byte)sceneId, dimmingDuration);
 			controller.sendData(msg);
 			
@@ -452,6 +452,10 @@ public class ZWaveScene {
 		}
 		for(Integer nodeId : nodes) {
 			ZWaveSceneDevice device = devices.get(nodeId);
+			if (device == null) {
+				logger.error("NODE {} is not associated with a Scene Device.", nodeId);
+				return;
+			}
 			ZWaveNode node = device.getNode();
 			if( node == null) {
 				logger.error("Programming scene capable devices. Device has no node information");

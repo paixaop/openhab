@@ -61,6 +61,7 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	ZWaveSceneManager(ZWaveController zController) {
 		controller = zController;
 		sceneManagerStore = new HashMap<Integer, ZWaveScene>();
+		
 	}
 	
 	public void testScene() {
@@ -80,6 +81,7 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	public ZWaveScene getScene(int id) {
 		return sceneManagerStore.get(id);
 	}
+	
 	
 	/**
 	 * Get a scene object from the manager by name
