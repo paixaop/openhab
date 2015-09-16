@@ -61,18 +61,30 @@ public class ZWaveSceneDevice {
 		return node;
 	}
 
+	/** 
+	 * Get the node of the device
+	 * @return node ID
+	 */
 	public int getNodeId() {
 		if(node != null) {
-			return node.getDeviceId();
+			return node.getNodeId();
 		}
 		return 0;
 	}
 	
+	/**
+	 * Check if devices supports scenes 
+	 * @return true if device supports scenes, false otherwise.
+	 */
 	public boolean isSceneSupported() {
 		return sceneSupport;
 	}
 
-	public void setValue(byte v) {
+	/**
+	 * Set the value/level of the device in this scene
+	 * @param v the desired value/level
+	 */
+	public void setValue(int v) {
 		if (node == null) {
 			logger.error("Scene Device trying to set a value of a NULL node. Set node first");
 			return;
@@ -80,7 +92,7 @@ public class ZWaveSceneDevice {
 
 		logger.debug("Scene Device set Node {} value to {}", node.getNodeId(), v);
 
-		value = v;
+		value = (byte) v;
 	}
 
 	public byte getValue() {

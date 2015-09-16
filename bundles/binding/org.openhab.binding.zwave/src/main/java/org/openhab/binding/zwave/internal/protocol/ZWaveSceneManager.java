@@ -61,7 +61,7 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	ZWaveSceneManager(ZWaveController zController) {
 		controller = zController;
 		sceneManagerStore = new HashMap<Integer, ZWaveScene>();
-		
+		controller.addEventListener(this);
 	}
 	
 	public void testScene() {
@@ -300,6 +300,7 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	 */
 	@Override
 	public void ZWaveIncomingEvent(ZWaveEvent event) {
+		//logger.info("Incoming Z-Wave Event. Will check if its a scene activation");
 		
 		// Check if we got a Z-Wave Value Event
 		if (event instanceof ZWaveCommandClassValueEvent) {
@@ -310,6 +311,7 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 				
 				// get the indicator value from the event
 				int sceneId = ((Integer) valueEvent.getValue()).intValue();
+				logger.info("Scene Activation Event for scene {}", sceneId);
 				
 				// the indicator state is now valid
 				activateScene(sceneId);
