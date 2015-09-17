@@ -83,6 +83,20 @@ public class ZWaveScene {
 		sceneControllers = new HashMap<Integer, ZWaveSceneController>();
 		sceneControllerButtons = new HashMap<Integer, Integer>();
 	}
+	
+	/**
+	 * Checks is the specified button of a scene controller can control this scene
+	 * @param nodeId scene controller ID
+	 * @param groupId button ID
+	 * @return true if button on scene controller can control this scene
+	 */
+	public boolean isSceneContollerBoundToScene(int nodeId, int groupId) {
+		if (sceneControllers.containsKey(nodeId) &&
+			sceneControllerButtons.get(nodeId) == groupId) {
+			return true;
+		}
+		return false;
+	}
 
 	/**
 	 * Get scene ID
@@ -171,18 +185,44 @@ public class ZWaveScene {
 	public void putSceneController(ZWaveSceneController sc, int group) {
 		ZWaveNode node = sc.getNode();
 		if (node != null) {
-			sceneControllers.put(node.getNodeId(), sc);
 			if (sc.isButtonIdValid(group)) {
+				sceneControllers.put(node.getNodeId(), sc);
 				logger.info("Node {} group {} bound to scene {}", node.getNodeId(), group, sceneId);
 				sceneControllerButtons.put(node.getNodeId(), group);
 			}
 			else {
 				logger.warn("Node {} attempt to bind an invalid group to scene controller.", node.getNodeId());
 			}
-			
 		}
 		else {
 			logger.warn("Scene Conotroller object does not have valid node information. Cannot add it to scene");
+		}
+	}
+	
+	
+	public void syncSceneControllers(int nodeId, boolean on) {
+		if(sceneControllerButtons.size() <= 1) {
+			// nothing to sync if it's only one controller in this scene
+			return;
+		}
+		
+		for(Integer controllerId : sceneControllerButtons.keySet()) {
+			
+			if (controllerId == nodeId) {
+				continue;
+			}
+			
+			int buttonId = sceneControllerButtons.get(controllerId);
+			ZWaveSceneController sc = sceneControllers.get(controllerId);
+			if (on) {
+				logger.info("NODE {} Scene Controller Sync Set Button {} to ON for Scene {}", nodeId, buttonId, sceneId);
+				sc.setButtonOn(buttonId);
+			}
+			else {
+				logger.info("NODE {} Scene Controller Sync Set Button {} to OFF for Scene {}", nodeId, buttonId, sceneId);
+				sc.setButtonOff(buttonId);
+			}
+			sceneControllers.put(controllerId, sc);
 		}
 	}
 	
