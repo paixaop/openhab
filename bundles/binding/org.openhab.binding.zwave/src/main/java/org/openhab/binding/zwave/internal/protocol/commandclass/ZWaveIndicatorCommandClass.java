@@ -17,6 +17,7 @@ import org.openhab.binding.zwave.internal.protocol.SerialMessage.SerialMessageCl
 import org.openhab.binding.zwave.internal.protocol.SerialMessage.SerialMessagePriority;
 import org.openhab.binding.zwave.internal.protocol.SerialMessage.SerialMessageType;
 import org.openhab.binding.zwave.internal.protocol.event.ZWaveCommandClassValueEvent;
+import org.openhab.binding.zwave.internal.protocol.event.ZWaveIndicatorCommandClassChangeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -106,9 +107,12 @@ public class ZWaveIndicatorCommandClass extends ZWaveCommandClass implements ZWa
 	 */
 	protected void processIndicatorReport(SerialMessage serialMessage, int offset,
 			int endpoint) {
-		indicator = serialMessage.getMessagePayloadByte(offset + 1); 
+		int newIndicator = serialMessage.getMessagePayloadByte(offset + 1); 
 		logger.debug(String.format("NODE %d: Indicator report, value = 0x%02X", this.getNode().getNodeId(), indicator));
-		ZWaveCommandClassValueEvent zEvent = new ZWaveCommandClassValueEvent(this.getNode().getNodeId(), endpoint, this.getCommandClass(), indicator);
+		
+		//ZWaveCommandClassValueEvent zEvent = new ZWaveCommandClassValueEvent(this.getNode().getNodeId(), endpoint, this.getCommandClass(), indicator);
+		ZWaveIndicatorCommandClassChangeEvent zEvent = new ZWaveIndicatorCommandClassChangeEvent(this.getNode().getNodeId(), endpoint, this.getCommandClass(), newIndicator, indicator);
+		indicator = newIndicator;
 		this.getController().notifyEventListeners(zEvent);
 	}
 
