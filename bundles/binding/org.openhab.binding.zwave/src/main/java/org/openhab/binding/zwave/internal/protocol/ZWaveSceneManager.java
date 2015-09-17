@@ -8,14 +8,12 @@
  */
 package org.openhab.binding.zwave.internal.protocol;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
 
-import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveSceneActivationCommandClass;
+import java.util.HashMap;
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass.CommandClass;
 import org.openhab.binding.zwave.internal.protocol.event.ZWaveCommandClassValueEvent;
 import org.openhab.binding.zwave.internal.protocol.event.ZWaveEvent;
+import org.openhab.binding.zwave.internal.protocol.event.ZWaveIndicatorCommandClassChangeEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -283,24 +281,6 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	}
 	
 	/**
-	 * Get a list of nodes that support the SCENE ACTIVATION command class
-	 * @return list of nodes
-	 */
-	public ArrayList<ZWaveNode> getNodesSupportingSceneActivation() {
-		Collection<ZWaveNode> nodes = controller.getNodes();
-		ArrayList<ZWaveNode> sceneActivationNodes = new ArrayList<ZWaveNode>();
-		
-		for(ZWaveNode node : nodes) {
-			ZWaveSceneActivationCommandClass sceneActivationCC = (ZWaveSceneActivationCommandClass)node.getCommandClass(CommandClass.SCENE_ACTIVATION);
-			if (sceneActivationCC != null) {
-				sceneActivationNodes.add(node);
-			}
-		}
-		
-		return sceneActivationNodes;
-	}
-	
-	/**
 	 * Process Z-Wave events and if they are SCENE_ACTIVATION command class value events
 	 * extract the scene ID
 	 * @param Z-Wave Events from controller
@@ -313,13 +293,37 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 		if (event instanceof ZWaveCommandClassValueEvent) {
 			ZWaveCommandClassValueEvent valueEvent = (ZWaveCommandClassValueEvent) event;
 			
-			// Is it an SCENE ACTIVATION Command Class event?
+			// Is it a SCENE ACTIVATION Command Class event?
 			if (valueEvent.getCommandClass() == CommandClass.SCENE_ACTIVATION) {
 				
 				int sceneId = ((Integer) valueEvent.getValue()).intValue();
 				logger.info("Scene Activation Event for scene {}", sceneId);
 				activateScene(sceneId);
+				return;
 				
+			}
+			// Is it an INDICATOR Command Class event?
+			if (valueEvent.getCommandClass() == CommandClass.INDICATOR) {
+				ZWaveIndicatorCommandClassChangeEvent indicatorEvent = (ZWaveIndicatorCommandClassChangeEvent) event;
+				int nodeId = valueEvent.getNodeId();
+				
+				// For all the buttons that changed lets check what other buttons in 
+				// other scene controllers are bound to the same scene
+				for(Integer button : indicatorEvent.changes()) {
+					for(Integer sceneId: sceneManagerStore.keySet()) {
+						ZWaveScene scene = sceneManagerStore.get(sceneId);
+						if (scene.isSceneContollerBoundToScene(nodeId, button) ) {
+							if (indicatorEvent.isBitOn(button)) {
+								logger.info("NODE {} Got Indicator Change Event. Button {} changed from OFF to ON", nodeId, button);
+							}
+							else {
+								logger.info("NODE {} Got Indicator Change Event. Button {} changed from ON to OFF", nodeId, button);
+							}
+							scene.syncSceneControllers(nodeId, indicatorEvent.isBitOn(button));
+							sceneManagerStore.put(sceneId, scene);
+						}
+					}
+				}
 			}
 		}
 	}
