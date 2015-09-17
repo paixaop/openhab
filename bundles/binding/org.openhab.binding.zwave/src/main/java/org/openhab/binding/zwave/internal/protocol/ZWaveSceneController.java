@@ -89,12 +89,14 @@ public class ZWaveSceneController implements ZWaveEventListener {
 		// until we get an INDICATOR Command Class Report from the device
 		indicator = 0;
 		indicatorValid = false;
+		indicatorCmdClass = null;
 		
 		setNode(newNode);
 		if (node != null) {
-			ZWaveIndicatorCommandClass indicatorCmdClass = (ZWaveIndicatorCommandClass) node.getCommandClass(ZWaveCommandClass.CommandClass.INDICATOR);
+			indicatorCmdClass = (ZWaveIndicatorCommandClass) node.getCommandClass(ZWaveCommandClass.CommandClass.INDICATOR);
 			if (indicatorCmdClass != null) {
-				logger.info("NODE {} supports Indicator command class, add event listner and Indicator status", node.getNodeId());
+				
+				logger.info("NODE {} supports Indicator command class, add event listener and Indicator status", node.getNodeId());
 				controller.addEventListener(this);
 				getNodeIndicator();
 			}
@@ -116,7 +118,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 		
 		// If button is already ON do nothing!
 		if (!isButtonOn(buttonId)) {
-			indicator = (byte) (indicator ^ ( 0x01 << buttonId));
+			indicator = (byte) (indicator ^ ( 0x01 << (buttonId - 1)));
 			logger.info("NODE {} setting button {} to ON. Indicator = {}", node.getNodeId(), buttonId, indicator);
 			setNodeIndicator();
 		}
@@ -134,7 +136,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 		
 		// If button is already OFF do nothing!
 		if (isButtonOn(buttonId)) {
-			indicator = (byte) (indicator & ~(0x01 << buttonId));
+			indicator = (byte) (indicator & ~(0x01 << (buttonId-1)));
 			logger.info("NODE {} setting button {} to OFF. Indicator = {}", node.getNodeId(), buttonId, indicator);
 			setNodeIndicator();
 		}
@@ -151,7 +153,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 			return false;
 		}
 		
-		int b = indicator & (0x01 << buttonId); 
+		int b = indicator & (0x01 << (buttonId-1)); 
 		if (b != 0) {
 			return true;
 		}
@@ -227,7 +229,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 			SerialMessage serialMessage = indicatorCmdClass.setValueMessage(indicator);
 			controller.sendData(serialMessage);
 			
-			// Send an INDICATOR GET message to later validate the state. 
+			logger.info("NODE {} send Indicator GET to update internal indicator state", node.getNodeId());
 			getNodeIndicator();
 		}
 		else {
@@ -312,7 +314,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 			return;
 		}
 		
-		logger.debug("NODE {} set Scene Controller for scene {}", n.getNodeId());
+		logger.debug("NODE {} set as a Scene Controller for scene", n.getNodeId());
 		node = n;
 	}
 	
@@ -367,7 +369,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 				// get the indicator value from the event
 				indicator = ((Integer) valueEvent.getValue()).byteValue();
 				
-				logger.info("NODE {} Indicator report event. Indicator {}", node.getNodeId(), indicator);
+				logger.info("NODE {} Indicator report event. Set Indicator to {}, and Indicator state to valid", node.getNodeId(), indicator);
 				
 				// the indicator state is now valid
 				indicatorValid = true;
