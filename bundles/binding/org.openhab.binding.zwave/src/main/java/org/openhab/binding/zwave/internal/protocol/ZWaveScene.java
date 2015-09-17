@@ -592,7 +592,7 @@ public class ZWaveScene {
 			return dimmingDuration + " seconds";
 		}
 		if (dimmingDuration < 0xFF) {
-			return (dimmingDuration - 0x80) + " minutes";
+			return (dimmingDuration - 0x79) + " minutes";
 		}
 		return "factory default duration";
 	}
