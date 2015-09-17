@@ -313,15 +313,13 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 		if (event instanceof ZWaveCommandClassValueEvent) {
 			ZWaveCommandClassValueEvent valueEvent = (ZWaveCommandClassValueEvent) event;
 			
-			// Is it an INDICATOR Command Class event for this node
+			// Is it an SCENE ACTIVATION Command Class event?
 			if (valueEvent.getCommandClass() == CommandClass.SCENE_ACTIVATION) {
 				
-				// get the indicator value from the event
 				int sceneId = ((Integer) valueEvent.getValue()).intValue();
 				logger.info("Scene Activation Event for scene {}", sceneId);
-				
-				// the indicator state is now valid
 				activateScene(sceneId);
+				
 			}
 		}
 	}
