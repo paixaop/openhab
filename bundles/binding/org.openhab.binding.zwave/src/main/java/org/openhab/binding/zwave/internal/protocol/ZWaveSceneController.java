@@ -8,6 +8,8 @@
  */
 package org.openhab.binding.zwave.internal.protocol;
 
+import java.util.ArrayList;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -118,7 +120,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 		
 		// If button is already ON do nothing!
 		if (!isButtonOn(buttonId)) {
-			indicator = (byte) (indicator ^ ( 0x01 << (buttonId - 1)));
+			indicator = (byte) (indicator | ( 0x01 << (buttonId - 1)));
 			logger.info("NODE {} setting button {} to ON. Indicator = {}", node.getNodeId(), buttonId, indicator);
 			setNodeIndicator();
 		}
@@ -351,6 +353,23 @@ public class ZWaveSceneController implements ZWaveEventListener {
 	}
 	
 	/**
+	 * Get the state of each button in scene controller
+	 * @return a list of button states (1 = ON, 0 = OFF)
+	 */
+	public ArrayList<Integer> getButtonsState() {
+		ArrayList<Integer> state = new ArrayList<Integer>();
+		for(int i=0; i< numberOfButtons; i++) {
+			if (isButtonOn(i+1)) {
+				state.add(1);
+			}
+			else {
+				state.add(0);
+			}
+		}
+		return state;
+	}
+	
+	/**
 	 * Process Z-Wave events and if they are INDICATOR command class value events
 	 * directed to this node extract the indicator value and validate internal state
 	 * @param Z-Wave Events from controller
@@ -358,21 +377,34 @@ public class ZWaveSceneController implements ZWaveEventListener {
 	@Override
 	public void ZWaveIncomingEvent(ZWaveEvent event) {
 		
+		// Check if event is for this node
+		if (event.getNodeId() != this.node.getNodeId()) {
+			return;
+		}
+		
 		// Check if we got a Z-Wave Value Event
 		if (event instanceof ZWaveCommandClassValueEvent) {
 			ZWaveCommandClassValueEvent valueEvent = (ZWaveCommandClassValueEvent) event;
 			
 			// Is it an INDICATOR Command Class event for this node
-			if (valueEvent.getCommandClass() == CommandClass.INDICATOR &&
-				valueEvent.getNodeId() == node.getNodeId() ) {
+			if (valueEvent.getCommandClass() == CommandClass.INDICATOR) {
 				
 				// get the indicator value from the event
 				indicator = ((Integer) valueEvent.getValue()).byteValue();
-				
 				logger.info("NODE {} Indicator report event. Set Indicator to {}, and Indicator state to valid", node.getNodeId(), indicator);
 				
 				// the indicator state is now valid
 				indicatorValid = true;
+				return;
+			}
+			
+			// Monitor OFF events. If node supports INDICATOR command class we will 
+			// Get the Indicator status and comparing the before and after we can determine
+			// which button was pressed in the controller
+			if (valueEvent.getCommandClass() == CommandClass.BASIC) {					
+				logger.info("NODE {} Basic Report event. Get Indicator state", node.getNodeId());
+				indicatorValid = false;
+				getNodeIndicator();
 			}
 		}
 	}
