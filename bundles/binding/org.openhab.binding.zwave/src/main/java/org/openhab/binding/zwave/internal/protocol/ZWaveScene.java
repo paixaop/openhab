@@ -199,6 +199,7 @@ public class ZWaveScene {
 				logger.info("Node {} group {} bound to scene {}",
 						node.getNodeId(), group, sceneId);
 				sceneControllerButtons.put(node.getNodeId(), group);
+				sc.setControllerEvents();
 			} else {
 				logger.warn(
 						"Node {} attempt to bind an invalid group to scene controller.",
@@ -279,6 +280,8 @@ public class ZWaveScene {
 	 */
 	public void removeSceneController(int nodeId) {
 		if (sceneControllers.containsKey(nodeId)) {
+			ZWaveSceneController sc = sceneControllers.get(nodeId);
+			sc.removeControllerEvents();
 			sceneControllers.remove(nodeId);
 			sceneControllerButtons.remove(nodeId);
 		} else {
