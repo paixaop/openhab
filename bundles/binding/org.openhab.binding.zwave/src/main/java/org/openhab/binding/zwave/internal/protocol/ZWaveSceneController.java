@@ -97,9 +97,6 @@ public class ZWaveSceneController implements ZWaveEventListener {
 		if (node != null) {
 			indicatorCmdClass = (ZWaveIndicatorCommandClass) node.getCommandClass(ZWaveCommandClass.CommandClass.INDICATOR);
 			if (indicatorCmdClass != null) {
-				
-				logger.info("NODE {} supports Indicator command class, add event listener and Indicator status", node.getNodeId());
-				controller.addEventListener(this);
 				getNodeIndicator();
 			}
 			else {
@@ -108,20 +105,30 @@ public class ZWaveSceneController implements ZWaveEventListener {
 		}
 	}
 	
+	public void setControllerEvents() {
+		controller.addEventListener(this);
+		logger.info("SCENE CONTROLLER: Register event listener for node {} ", node.getNodeId());
+	}
+	
+	public void removeControllerEvents() {
+		controller.removeEventListener(this);
+		logger.info("SCENE CONTROLLER: Deregister event listener for node {} ", node.getNodeId());
+	}
+	
 	/**
 	 * Set a scene controller button to ON 
 	 * @param buttonId ID of the button that will be tuned on
 	 */
 	public void setButtonOn(int buttonId) {
 		if (!isButtonIdValid(buttonId)) {
-			logger.error("NODE {} invalid button {}", node.getNodeId(), buttonId);
+			logger.error("NODE {} Invalid button {}", node.getNodeId(), buttonId);
 			return;
 		}
 		
 		// If button is already ON do nothing!
 		if (!isButtonOn(buttonId)) {
 			indicator = (byte) (indicator | ( 0x01 << (buttonId - 1)));
-			logger.info("NODE {} setting button {} to ON. Indicator = {}", node.getNodeId(), buttonId, indicator);
+			logger.info("NODE {} Setting Button {} to ON. Indicator = {}", node.getNodeId(), buttonId, indicator);
 			setNodeIndicator();
 		}
 	}
@@ -224,18 +231,18 @@ public class ZWaveSceneController implements ZWaveEventListener {
 	 */
 	public void setNodeIndicator() {
 		if (indicatorCmdClass != null) {
-			logger.info("NODE {} send Indicator SET to node with indicator {}", node.getNodeId(), indicator);
+			logger.info("NODE {} Send INDICATOR SET Message with Indicator {}", node.getNodeId(), indicator);
 			// Indicator changed so internal value is no longer valid
 			indicatorValid = false;
 			
 			SerialMessage serialMessage = indicatorCmdClass.setValueMessage(indicator);
 			controller.sendData(serialMessage);
 			
-			logger.info("NODE {} send Indicator GET to update internal indicator state", node.getNodeId());
+			logger.info("NODE {} Send INDICATOR GET Message to update internal Indicator state", node.getNodeId());
 			getNodeIndicator();
 		}
 		else {
-			logger.info("NODE {} does not support indicator class, not sending SET INDICATOR message",node.getNodeId());
+			logger.info("NODE {} Does not support INDICATOR Command class, not sending SET INDICATOR message",node.getNodeId());
 		}
 	}
 	
