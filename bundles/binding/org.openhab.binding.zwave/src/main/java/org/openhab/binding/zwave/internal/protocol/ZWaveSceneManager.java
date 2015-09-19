@@ -14,6 +14,7 @@ import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClas
 import org.openhab.binding.zwave.internal.protocol.event.ZWaveCommandClassValueEvent;
 import org.openhab.binding.zwave.internal.protocol.event.ZWaveEvent;
 import org.openhab.binding.zwave.internal.protocol.event.ZWaveIndicatorCommandClassChangeEvent;
+import org.openhab.binding.zwave.internal.protocol.event.ZWaveInitializationCompletedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,6 +52,9 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	// Hash of Z-Wave Home IDs as Keys and scenes as Values
 	// scenes are themselves a hash of scene ID as key and ZWaveScene values
 	private HashMap<Integer, ZWaveScene> sceneManagerStore;
+	private HashMap<Integer, HashMap<Integer, Integer>> sceneControllerStore;
+	
+	private boolean testSceneSetup;
 	
 	
 	@XStreamOmitField
@@ -59,7 +63,11 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	ZWaveSceneManager(ZWaveController zController) {
 		controller = zController;
 		sceneManagerStore = new HashMap<Integer, ZWaveScene>();
+		sceneControllerStore = new HashMap<Integer, HashMap<Integer, Integer>>();
+		
+		logger.info("SCENE MANAGER: Register event listener");
 		controller.addEventListener(this);
+		testSceneSetup = false;
 	}
 	
 	public void testScene() {
@@ -69,6 +77,7 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 		addSceneController(sceneId, 2, 1);
 		addSceneController(sceneId, 3, 1);
 		getScene("test").program();
+		testSceneSetup = true;
 	}
 	
 	/**
@@ -123,6 +132,17 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 			scene.putSceneController(sc, groupId);
 			sceneManagerStore.put(sceneId, scene);
 			logger.info("NODE {} Scene Controller Button {} assigned to Scene {}", nodeId, groupId, sceneId);
+			
+			// Store all controller devices to ease event handling
+			HashMap<Integer, Integer> scenes;
+			if(sceneControllerStore.containsKey(nodeId)) {
+				scenes = sceneControllerStore.get(nodeId);
+			}
+			else {
+				scenes = new HashMap<Integer, Integer>();
+			}
+			scenes.put(groupId, sceneId);
+			sceneControllerStore.put(nodeId, scenes);
 		}
 		else {
 			logger.error("NODE {} is not a scene controller. Cannot add it to scene {}", nodeId, sceneId);
@@ -156,7 +176,7 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 		if (sceneManagerStore.isEmpty()) {
 			return 1;
 		}
-		for(int i = 0; i< sceneManagerStore.size(); i++) {
+		for(int i = 1; i< sceneManagerStore.size(); i++) {
 			if (!sceneManagerStore.containsKey(i)) {
 				return i;
 			}
@@ -185,6 +205,11 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	public int newScene(String newName) {
 		if (sceneManagerStore.size() < MAX_NUMBER_OF_SCENES) {
 			int sceneId = getLowestUnusedSceneId();
+			
+			if(sceneId == 0) {
+				return 0;
+			}
+			
 			ZWaveScene zTemp = new ZWaveScene(controller, sceneId);
 			zTemp.setName(newName);
 			sceneManagerStore.put(sceneId, zTemp);
@@ -287,7 +312,23 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	 */
 	@Override
 	public void ZWaveIncomingEvent(ZWaveEvent event) {
-		//logger.info("Incoming Z-Wave Event. Will check if its a scene activation");
+		
+		if (event instanceof ZWaveInitializationCompletedEvent) {
+			logger.info("SCENE MANAGER: Controller initialization complete");
+			if(!testSceneSetup) {
+				testSceneSetup = true;
+				testScene();
+			}
+			return;
+		}
+		
+		// Ignore if event does not come from a Scene Controller that is bound 
+		// to a scene in the scene manager
+		if(!sceneControllerStore.containsKey(event.getNodeId())) {
+			return;
+		}
+		
+		logger.info("SCENE MANAGER: Incoming Scene Controller Event from Node {}", event.getNodeId());
 		
 		// Check if we got a Z-Wave Value Event
 		if (event instanceof ZWaveCommandClassValueEvent) {
@@ -302,26 +343,30 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 				return;
 				
 			}
+			
+			logger.info("SCENE MANAGER: Incoming Z-Wave Event. Check to see if it's indicator");
 			// Is it an INDICATOR Command Class event?
 			if (valueEvent.getCommandClass() == CommandClass.INDICATOR) {
+				
 				ZWaveIndicatorCommandClassChangeEvent indicatorEvent = (ZWaveIndicatorCommandClassChangeEvent) event;
 				int nodeId = valueEvent.getNodeId();
+				logger.info("SCENE MANAGER: Incoming INDICATOR Event for node {}. Changes: ", nodeId, indicatorEvent.changes().toString());
 				
 				// For all the buttons that changed lets check what other buttons in 
 				// other scene controllers are bound to the same scene
 				for(Integer button : indicatorEvent.changes()) {
-					for(Integer sceneId: sceneManagerStore.keySet()) {
-						ZWaveScene scene = sceneManagerStore.get(sceneId);
-						if (scene.isSceneContollerBoundToScene(nodeId, button) ) {
-							if (indicatorEvent.isBitOn(button)) {
-								logger.info("NODE {} Got Indicator Change Event. Button {} changed from OFF to ON", nodeId, button);
-							}
-							else {
-								logger.info("NODE {} Got Indicator Change Event. Button {} changed from ON to OFF", nodeId, button);
-							}
-							scene.syncSceneControllers(nodeId, indicatorEvent.isBitOn(button));
-							sceneManagerStore.put(sceneId, scene);
+					// Get the scene
+					int sceneId = sceneControllerStore.get(nodeId).get(button);
+					ZWaveScene scene = sceneManagerStore.get(sceneId);
+					if (scene.isSceneContollerBoundToScene(nodeId, button) ) {
+						if (indicatorEvent.isBitOn(button)) {
+							logger.info("NODE {} Got Indicator Change Event. Button {} changed from OFF to ON", nodeId, button);
 						}
+						else {
+							logger.info("NODE {} Got Indicator Change Event. Button {} changed from ON to OFF", nodeId, button);
+						}
+						scene.syncSceneControllers(nodeId, indicatorEvent.isBitOn(button));
+						sceneManagerStore.put(sceneId, scene);
 					}
 				}
 			}
