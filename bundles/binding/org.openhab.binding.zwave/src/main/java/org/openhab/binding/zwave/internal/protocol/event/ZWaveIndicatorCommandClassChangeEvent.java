@@ -30,9 +30,8 @@ public class ZWaveIndicatorCommandClassChangeEvent extends ZWaveCommandClassValu
 	 * @param the new indicator value for the event.
 	 * @param the value currently held by indicator for the event.
 	 */
-	public ZWaveIndicatorCommandClassChangeEvent(int nodeId, int endpoint, CommandClass commandClass, int value, int oldValue) {
-		super(nodeId, endpoint, commandClass, value);
-		
+	public ZWaveIndicatorCommandClassChangeEvent(int nodeId, int endpoint, CommandClass commandClass, int newValue, int oldValue) {
+		super(nodeId, endpoint, commandClass, newValue);
 		this.currentIndicator = oldValue;
 	}
 
