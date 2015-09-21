@@ -10,11 +10,14 @@ package org.openhab.binding.zwave.internal.protocol;
 
 
 import java.util.HashMap;
+import java.util.Timer;
+import java.util.TimerTask;
+
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass.CommandClass;
 import org.openhab.binding.zwave.internal.protocol.event.ZWaveCommandClassValueEvent;
 import org.openhab.binding.zwave.internal.protocol.event.ZWaveEvent;
 import org.openhab.binding.zwave.internal.protocol.event.ZWaveIndicatorCommandClassChangeEvent;
-import org.openhab.binding.zwave.internal.protocol.event.ZWaveInitializationCompletedEvent;
+import org.openhab.binding.zwave.internal.protocol.initialization.ZWaveSceneManagerSerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,17 +48,19 @@ import com.thoughtworks.xstream.annotations.XStreamOmitField;
 public class ZWaveSceneManager implements ZWaveEventListener {
 	@XStreamOmitField
 	private static final Logger logger = LoggerFactory.getLogger(ZWaveSceneManager.class);
+	
+	@XStreamOmitField
+	private ZWaveSceneManagerSerializer sceneSerializer = new ZWaveSceneManagerSerializer();
 
 	// Maximum number of scenes supported by ZWave
-	private static final int MAX_NUMBER_OF_SCENES = 256;
+	private static final int MAX_NUMBER_OF_SCENES = 255;
 	
 	// Hash of Z-Wave Home IDs as Keys and scenes as Values
 	// scenes are themselves a hash of scene ID as key and ZWaveScene values
 	private HashMap<Integer, ZWaveScene> sceneManagerStore;
+	
+	// <controlerNodeId, <groupId, sceneId>>
 	private HashMap<Integer, HashMap<Integer, Integer>> sceneControllerStore;
-	
-	private boolean testSceneSetup;
-	
 	
 	@XStreamOmitField
 	private ZWaveController controller;
@@ -67,17 +72,37 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 		
 		logger.info("SCENE MANAGER: Register event listener");
 		controller.addEventListener(this);
-		testSceneSetup = false;
+		
+		Timer initTimer = new Timer();
+		initTimer.schedule(new ProgramTestSceneTask(), 30000);
+		
+	}
+	
+	private class ProgramTestSceneTask extends TimerTask {
+		@Override
+		public void run() {
+			testScene();
+		}
 	}
 	
 	public void testScene() {
-		int sceneId = newScene("test");
+		int sceneId = 0;
+		try {
+			sceneId = newScene("test");
+		} catch (ZWaveSceneException e) {
+			e.printStackTrace();
+		}
 		logger.info("Scene Manager Test Scene {}", sceneId);
 		addDevice(sceneId, 4, 50);
 		addSceneController(sceneId, 2, 1);
 		addSceneController(sceneId, 3, 1);
 		getScene("test").program();
-		testSceneSetup = true;
+		sceneSerializer.serialize(this);
+		Object o = sceneSerializer.deserialize();
+	}
+	
+	public HashMap<Integer, ZWaveScene> getScenes() {
+		return sceneManagerStore;
 	}
 	
 	/**
@@ -192,22 +217,51 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 
 	/**
 	 * Add a new Z-Wave scene to the scene manager
+	 * @throws ZWaveSceneException 
 	 */
-	public int newScene() {
+	public int newScene() throws ZWaveSceneException {
 		return newScene("");
 	}
+	
+	/**
+	 * Add a new Z-Wave scene to the scene manager
+	 * @param scene ID
+	 * @throws ZWaveSceneException 
+	 */
+	public int newScene(int sceneId) throws ZWaveSceneException {
+		return newScene(sceneId, "");
+	}
+	
+	/**
+	 * Add a new Z-Wave scene to the scene manager
+	 * The next lowest scene number available will be used
+	 * @param scene name
+	 * @throws ZWaveSceneException 
+	 */
+	public int newScene(String name) throws ZWaveSceneException {
+		return newScene(0, name);
+	}
+
 
 	/**
 	 * Add a new Z-Wave scene to the scene manager with a scene name
+	 * @param scene ID
 	 * @param newName String with name of scene
 	 * @return sceneId in case the scene is successful added, 0 otherwise
+	 * @throws Exception 
 	 */
-	public int newScene(String newName) {
+	public int newScene(int sceneId, String newName) throws ZWaveSceneException {
+		if (sceneId > MAX_NUMBER_OF_SCENES) {
+			throw new ZWaveSceneException(String.format("Scene ID needs to be smaller than %d. You entered %d", MAX_NUMBER_OF_SCENES),sceneId);
+		}
 		if (sceneManagerStore.size() < MAX_NUMBER_OF_SCENES) {
-			int sceneId = getLowestUnusedSceneId();
+			
+			if (sceneId == 0) {
+				sceneId = getLowestUnusedSceneId();
+			}
 			
 			if(sceneId == 0) {
-				return 0;
+				throw new ZWaveSceneException(String.format("Scene Manager exceeded the number of available scenes %d", MAX_NUMBER_OF_SCENES),0);
 			}
 			
 			ZWaveScene zTemp = new ZWaveScene(controller, sceneId);
@@ -219,6 +273,10 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 			logger.info("Maximum number of scenes ({})reached. Cannot add new scenes until you delete some.", MAX_NUMBER_OF_SCENES);
 			return 0;
 		}
+	}
+	
+	public void setScene(int sceneId, ZWaveScene scene) {
+		sceneManagerStore.put(sceneId, scene);
 	}
 
 	/**
@@ -312,27 +370,17 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	 */
 	@Override
 	public void ZWaveIncomingEvent(ZWaveEvent event) {
-		
-		if (event instanceof ZWaveInitializationCompletedEvent) {
-			logger.info("SCENE MANAGER: Controller initialization complete");
-			if(!testSceneSetup) {
-				testSceneSetup = true;
-				testScene();
-			}
-			return;
-		}
-		
 		// Ignore if event does not come from a Scene Controller that is bound 
 		// to a scene in the scene manager
 		if(!sceneControllerStore.containsKey(event.getNodeId())) {
 			return;
 		}
 		
-		logger.info("SCENE MANAGER: Incoming Scene Controller Event from Node {}", event.getNodeId());
-		
 		// Check if we got a Z-Wave Value Event
 		if (event instanceof ZWaveCommandClassValueEvent) {
 			ZWaveCommandClassValueEvent valueEvent = (ZWaveCommandClassValueEvent) event;
+			
+			logger.info("SCENE MANAGER: Incoming Scene Controller Event from Node {} Comand Class {}", valueEvent.getNodeId(), valueEvent.getCommandClass().getLabel() );
 			
 			// Is it a SCENE ACTIVATION Command Class event?
 			if (valueEvent.getCommandClass() == CommandClass.SCENE_ACTIVATION) {
@@ -344,7 +392,6 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 				
 			}
 			
-			logger.info("SCENE MANAGER: Incoming Z-Wave Event. Check to see if it's indicator");
 			// Is it an INDICATOR Command Class event?
 			if (valueEvent.getCommandClass() == CommandClass.INDICATOR) {
 				
