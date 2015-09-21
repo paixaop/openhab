@@ -79,7 +79,9 @@ public class ZWaveIndicatorCommandClass extends ZWaveCommandClass implements ZWa
 		int command = serialMessage.getMessagePayloadByte(offset);
 		switch (command) {
 			case INDICATOR_SET:
-				logger.debug("NODE {}: Indicator Set sent to the controller will be processed as Indicator Report", this.getNode().getNodeId());
+				logger.debug("NODE {}: Indicator Set sent to the controller will be processed as Indicator Report", 
+						this.getNode().getNodeId());
+				
 				// Process this as if it was a value report.
 				processIndicatorReport(serialMessage, offset, endpoint);
 				break;
@@ -107,10 +109,16 @@ public class ZWaveIndicatorCommandClass extends ZWaveCommandClass implements ZWa
 	protected void processIndicatorReport(SerialMessage serialMessage, int offset,
 			int endpoint) {
 		int newIndicator = serialMessage.getMessagePayloadByte(offset + 1); 
-		logger.debug(String.format("NODE %d: Indicator report, value = 0x%02X", this.getNode().getNodeId(), indicator));
 		
-		//ZWaveCommandClassValueEvent zEvent = new ZWaveCommandClassValueEvent(this.getNode().getNodeId(), endpoint, this.getCommandClass(), indicator);
-		ZWaveIndicatorCommandClassChangeEvent zEvent = new ZWaveIndicatorCommandClassChangeEvent(this.getNode().getNodeId(), endpoint, this.getCommandClass(), newIndicator, indicator);
+		logger.debug(String.format("NODE %d: Indicator report, value = 0x%02X", this.getNode().getNodeId(), newIndicator));
+		
+		ZWaveIndicatorCommandClassChangeEvent zEvent = new ZWaveIndicatorCommandClassChangeEvent(
+				this.getNode().getNodeId(), 
+				endpoint, 
+				this.getCommandClass(), 
+				newIndicator, 
+				indicator);
+		
 		indicator = newIndicator;
 		this.getController().notifyEventListeners(zEvent);
 	}
@@ -119,6 +127,7 @@ public class ZWaveIndicatorCommandClass extends ZWaveCommandClass implements ZWa
 	 * Gets a SerialMessage with the INDICATOR GET command 
 	 * @return the serial message
 	 */
+	@Override
 	public SerialMessage getValueMessage() {
 		if(isGetSupported == false) {
 			logger.debug("NODE {}: Node doesn't support get requests", this.getNode().getNodeId());
@@ -149,6 +158,7 @@ public class ZWaveIndicatorCommandClass extends ZWaveCommandClass implements ZWa
 	 * @param the level to set.
 	 * @return the serial message
 	 */
+	@Override
 	public SerialMessage setValueMessage(int newIndicator) {
 		logger.debug("NODE {}: Creating new message for application command INDICATOR_SET", this.getNode().getNodeId());
 		SerialMessage result = new SerialMessage(this.getNode().getNodeId(), SerialMessageClass.SendData, SerialMessageType.Request, SerialMessageClass.SendData, SerialMessagePriority.Set);
