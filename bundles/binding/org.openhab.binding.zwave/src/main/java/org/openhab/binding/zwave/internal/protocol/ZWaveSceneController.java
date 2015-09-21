@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveAssociationCommandClass;
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass;
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass.CommandClass;
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveIndicatorCommandClass;
@@ -127,8 +128,9 @@ public class ZWaveSceneController implements ZWaveEventListener {
 		
 		// If button is already ON do nothing!
 		if (!isButtonOn(buttonId)) {
-			indicator = (byte) (indicator | ( 0x01 << (buttonId - 1)));
-			logger.info("NODE {} Setting Button {} to ON. Indicator = {}", node.getNodeId(), buttonId, indicator);
+			byte buttonMask = (byte) (0x01 << (buttonId - 1));
+			indicator = (byte) (indicator | buttonMask);
+			logger.info(String.format("NODE %d Setting Button %d to ON. Indicator = 0x%02X", node.getNodeId(), buttonId, indicator));
 			setNodeIndicator();
 		}
 	}
@@ -145,8 +147,9 @@ public class ZWaveSceneController implements ZWaveEventListener {
 		
 		// If button is already OFF do nothing!
 		if (isButtonOn(buttonId)) {
-			indicator = (byte) (indicator & ~(0x01 << (buttonId-1)));
-			logger.info("NODE {} setting button {} to OFF. Indicator = {}", node.getNodeId(), buttonId, indicator);
+			byte buttonMask = (byte) ~(0x01 << (buttonId-1));
+			indicator = (byte) (indicator & buttonMask);
+			logger.info(String.format("NODE %d Setting Button %d to ON. Indicator = 0x%02X", node.getNodeId(), buttonId, indicator));
 			setNodeIndicator();
 		}
 	}
@@ -220,7 +223,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 		byte previousIndicator = indicator;
 		indicator = newIndicator;
 		setNodeIndicator();
-		logger.info("NODE {} set indicator to {}", node.getNodeId(), indicator);
+		logger.info(String.format("NODE %d Set Indicator to %d", node.getNodeId(), indicator));
 		return previousIndicator;
 	}
 	
@@ -231,7 +234,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 	 */
 	public void setNodeIndicator() {
 		if (indicatorCmdClass != null) {
-			logger.info("NODE {} Send INDICATOR SET Message with Indicator {}", node.getNodeId(), indicator);
+			logger.info(String.format("NODE %d Send INDICATOR SET Message with Indicator %d", node.getNodeId(), indicator));
 			// Indicator changed so internal value is no longer valid
 			indicatorValid = false;
 			
@@ -342,6 +345,26 @@ public class ZWaveSceneController implements ZWaveEventListener {
 	public ZWaveNode getNode() {
 		return node;
 	}
+	
+	/**
+	 * Clear all associations for specified group. All nodes will be removed from the association group 
+	 * @param ID of the group to clear
+	 */
+	public void resetAssociations(int groupId) {
+		if (node == null) {
+			logger.error("Scene Controller does not have Z-Wave node information. Set node first!");
+			return;
+		}
+
+		// remove all nodes from association group
+		ZWaveAssociationCommandClass associationCmdClass = (ZWaveAssociationCommandClass) node
+				.getCommandClass(CommandClass.ASSOCIATION);
+		SerialMessage message = associationCmdClass
+				.removeAllAssociatedNodesMessage(groupId, node.getNodeId());
+		controller.sendData(message);
+	}
+
+
 
 	/**
 	 * Is the device a Copper Scene Controller
