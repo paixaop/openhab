@@ -36,11 +36,17 @@ public class ZWaveScene {
 	@XStreamOmitField
 	private static final Logger logger = LoggerFactory
 			.getLogger(ZWaveScene.class);
+	
+	@XStreamOmitField
 	private static final byte DEFAULT_DIMMING_DURATION = 0x03;
+	
+	@XStreamOmitField
 	private static final byte DEFAULT_OVERRIDE = 0x01;
 
 	private String sceneName;
 	private int sceneId;
+	
+	@XStreamOmitField
 	private ZWaveController controller;
 
 	// Map nodes to scene controlled devices Hash<nodeId, sceneDevice>
@@ -50,6 +56,7 @@ public class ZWaveScene {
 	private HashMap<Integer, ZWaveSceneController> sceneControllers;
 
 	// Map nodes to node buttons Hash<nodeId, buttonID>
+	@XStreamOmitField
 	private HashMap<Integer, Integer> sceneControllerButtons;
 
 	private byte dimmingDuration;
@@ -58,6 +65,10 @@ public class ZWaveScene {
 	// the controller provided level
 	private byte override;
 
+	ZWaveScene() {
+		init(null, 0, "", DEFAULT_DIMMING_DURATION);
+	}
+	
 	ZWaveScene(ZWaveController zController) {
 		init(zController, 0, "", DEFAULT_DIMMING_DURATION);
 	}
@@ -105,6 +116,10 @@ public class ZWaveScene {
 		return false;
 	}
 
+	public int getSceneControllerButton(int controllerId) {
+		return sceneControllerButtons.get(controllerId);
+	}
+	
 	/**
 	 * Get scene ID
 	 * 
@@ -408,32 +423,11 @@ public class ZWaveScene {
 		return out;
 	}
 
-	public void resetSceneControllerAssociations() {
-		// Iterate all scene controllers bound to this scene
-		for (ZWaveSceneController sceneController : sceneControllers.values()) {
-
-			ZWaveNode node = sceneController.getNode();
-			if (node == null) {
-				logger.error("Scene Controller does not have Z-Wave node information. Set node first!");
-				return;
-			}
-
-			// What device button, AKA group is going to be programmed.
-			int groupId = sceneControllerButtons.get(node.getNodeId());
-
-			// remove all nodes from association group
-			ZWaveAssociationCommandClass associationCmdClass = (ZWaveAssociationCommandClass) node
-					.getCommandClass(CommandClass.ASSOCIATION);
-			SerialMessage message = associationCmdClass
-					.removeAllAssociatedNodesMessage(groupId, node.getNodeId());
-			controller.sendData(message);
-		}
-	}
-
 	/**
 	 * Program scene into Scene controllers and scene nodes
+	 * @throws ZWaveSceneException 
 	 */
-	public void programSceneControllersWithNonSceneCapableDevices() {
+	public void programSceneControllersWithNonSceneCapableDevices() throws ZWaveSceneException {
 
 		HashMap<Integer, ArrayList<Integer>> basicDevices = groupDevicesByLevels();
 
@@ -445,9 +439,16 @@ public class ZWaveScene {
 				logger.error("Scene Controller does not have Z-Wave node information. Set node first!");
 				return;
 			}
+			
+			if (!node.isInitializationComplete()) {
+				throw new ZWaveSceneException(String.format("NODE %s is not initializaed yet! Cannot program scene.", node.getNodeId()), sceneId);
+			}
+			
 
 			// What device button, AKA group is going to be programmed.
 			int groupId = sceneControllerButtons.get(node.getNodeId());
+			
+			sceneController.resetAssociations(groupId);
 
 			ZWaveAssociationCommandClass associationCmdClass = (ZWaveAssociationCommandClass) node
 					.getCommandClass(CommandClass.ASSOCIATION);
@@ -485,7 +486,7 @@ public class ZWaveScene {
 		}
 	}
 
-	public void programSceneControllersWithSceneCapableDevices() {
+	public void programSceneControllersWithSceneCapableDevices() throws ZWaveSceneException {
 
 		// Iterate all scene controllers bound to this scene
 		for (ZWaveSceneController sceneController : sceneControllers.values()) {
@@ -494,6 +495,10 @@ public class ZWaveScene {
 			if (node == null) {
 				logger.error("Scene Controller does not have Z-Wave node information. Set node first!");
 				return;
+			}
+			
+			if (!node.isInitializationComplete()) {
+				throw new ZWaveSceneException(String.format("NODE %s is not initializaed yet! Cannot program scene.", node.getNodeId()), sceneId);
 			}
 
 			// What device button, AKA group is going to be programmed.
@@ -535,8 +540,9 @@ public class ZWaveScene {
 
 	/**
 	 * Configure Scene in all Scene Capable actuators, or nodes.
+	 * @throws ZWaveSceneException 
 	 */
-	public void programSceneCapableNodes() {
+	public void programSceneCapableNodes() throws ZWaveSceneException {
 		// Get all scene supporting nodes
 		ArrayList<Integer> nodes = getNodesSupportingSceneActivation();
 		if (nodes == null) {
@@ -557,7 +563,16 @@ public class ZWaveScene {
 				logger.error("Programming scene capable devices. Device has no node information");
 				continue;
 			}
-
+			
+			if (node.isDead()) {
+				logger.error("NODE {} is Dead! Will not add it to scene.", node.getNodeId());
+				continue;
+			}
+			
+			if (!node.isInitializationComplete()) {
+				throw new ZWaveSceneException(String.format("NODE %s is not initializaed yet! Cannot program scene.", node.getNodeId()), sceneId);
+			}
+			
 			ZWaveSceneActuatorConfCommandClass sceneActuatorCmdClass = (ZWaveSceneActuatorConfCommandClass) node
 					.getCommandClass(CommandClass.SCENE_ACTUATOR_CONF);
 			logger.info(
@@ -576,10 +591,14 @@ public class ZWaveScene {
 	 * Program scenes into Z-Wave nodes
 	 */
 	public void program() {
-		resetSceneControllerAssociations();
-		programSceneControllersWithNonSceneCapableDevices();
-		programSceneControllersWithSceneCapableDevices();
-		programSceneCapableNodes();
+		try {
+			programSceneControllersWithNonSceneCapableDevices();
+			programSceneControllersWithSceneCapableDevices();
+			programSceneCapableNodes();
+		}
+		catch (ZWaveSceneException e) {
+			logger.error(e.getMessage());
+		}
 	}
 
 	/**
