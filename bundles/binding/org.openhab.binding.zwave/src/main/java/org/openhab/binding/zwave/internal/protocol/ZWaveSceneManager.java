@@ -74,7 +74,7 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 		controller.addEventListener(this);
 		
 		Timer initTimer = new Timer();
-		initTimer.schedule(new ProgramTestSceneTask(), 30000);
+		initTimer.schedule(new ProgramTestSceneTask(), 1000);
 		
 	}
 	
@@ -93,12 +93,12 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 			e.printStackTrace();
 		}
 		logger.info("Scene Manager Test Scene {}", sceneId);
-		addDevice(sceneId, 4, 50);
+		/* addDevice(sceneId, 4, 50);
 		addSceneController(sceneId, 2, 1);
 		addSceneController(sceneId, 3, 1);
 		getScene("test").program();
-		sceneSerializer.serialize(this);
-		Object o = sceneSerializer.deserialize();
+		sceneSerializer.serialize(this); */
+		sceneSerializer.deserialize(this);
 	}
 	
 	public HashMap<Integer, ZWaveScene> getScenes() {
