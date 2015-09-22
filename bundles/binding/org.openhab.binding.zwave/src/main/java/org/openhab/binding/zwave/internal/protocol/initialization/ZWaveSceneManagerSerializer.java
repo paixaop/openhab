@@ -110,7 +110,7 @@ public class ZWaveSceneManagerSerializer {
 	 *            the number of the node to deserialize
 	 * @return returns the scene or null in case Serialization failed.
 	 */
-	public Object deserialize() {
+	public Object deserialize(ZWaveSceneManager sm) {
 		synchronized (stream) {
 			File file = new File(this.folderName, "scenes.xml");
 			BufferedReader reader = null;
@@ -124,8 +124,10 @@ public class ZWaveSceneManagerSerializer {
 
 			try {
 				reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"));
-				Object o = stream.fromXML(reader);
-				return o;
+				stream.registerConverter(new SceneManagerConverter());
+				stream.alias("scenes", ZWaveSceneManager.class);
+				sm = (ZWaveSceneManager) stream.fromXML(reader, sm);
+				return sm;
 			} catch (IOException e) {
 				logger.error("SCENE MANAGER: Error deserializing from file: {}", e.getMessage());
 			} finally {
@@ -200,19 +202,41 @@ public class ZWaveSceneManagerSerializer {
 	    }
 	    
 	    public Object unmarshal(HierarchicalStreamReader reader, UnmarshallingContext context) {
-	    	ZWaveSceneManager sceneManager = (ZWaveSceneManager)context.get(ZWaveSceneManager.class);
+	    	ZWaveSceneManager sceneManager = (ZWaveSceneManager)context.currentObject();
+	    	if(sceneManager == null) {
+	    		logger.error("Could not deserialize scenes.");
+	    		return null;
+	    	}
 	    	try {
+	    		int sceneId = 0;
+	    		String nodeName = reader.getNodeName();
+	    		if (!"scenes".equalsIgnoreCase(nodeName)) {
+	    			 throw new ZWaveSceneException("Bad scenes.xml file format. Could not find <scenes></scenes> element", 0);
+	    		}
+	    		reader.moveDown();
 	    		while (reader.hasMoreChildren()) {
-		    		reader.moveDown();
-		    		String nodeName = reader.getNodeName();
+		    		nodeName = reader.getNodeName();
 		            if ("scene".equalsIgnoreCase(nodeName)) {
-		            	reader.moveDown();
-		            	int sceneId = 0;
 		            	while (reader.hasMoreChildren()) {
-		            		nodeName = reader.getNodeName();
+			            	// In the scene element
+			            	reader.moveDown();
+			            	nodeName = reader.getNodeName();
+			            	
+			            	if (!"id".equalsIgnoreCase(nodeName) && sceneId == 0) {
+			            		logger.error("Scene ID must be defined before name in scenes.xml file {}", nodeName);
+	            				throw new ZWaveSceneException("Scene ID must be defined before name in scenes.xml file", 0);
+			            	}
+			            	
 		            		if ("id".equalsIgnoreCase(nodeName)) {
-		            			sceneId = Integer.parseInt(reader.getValue());
-		            			sceneManager.newScene(sceneId);
+		            			sceneId = Math.abs(Integer.parseInt(reader.getValue()));
+		            			if( sceneId != 0 ) {
+		            				sceneManager.newScene(sceneId);
+    	            			}
+    	            			else {
+    	            				logger.error("Scene ID needs to be >1 in scene {}", sceneId);
+    	            				throw new ZWaveSceneException("Controller node ID needs to be >1", sceneId);
+    	            			}
+		            			
 		            		}
 		            		else if ("name".equalsIgnoreCase(nodeName)) {
 		            			ZWaveScene s = sceneManager.getScene(sceneId);
@@ -225,34 +249,53 @@ public class ZWaveSceneManagerSerializer {
 		            			sceneManager.setScene(sceneId, s);
 		            		}
 		            		else if ("devices".equalsIgnoreCase(nodeName)) {
-		            			reader.moveDown();
 		            			while (reader.hasMoreChildren()) {
+		            				reader.moveDown();
 		            				nodeName = reader.getNodeName();
 		            				if ("device".equalsIgnoreCase(nodeName)) {
 		    	            			int nodeId = Integer.parseInt(reader.getAttribute("node"));
-		    	            			int value = Integer.parseInt(reader.getValue());
-		    	            			sceneManager.addDevice(sceneId, nodeId, value);
+		    	            			int value = Math.abs(Integer.parseInt(reader.getValue()));
+		    	            			
+		    	            			if( nodeId != 0 ) {
+		    	            				sceneManager.addDevice(sceneId, nodeId, value);
+		    	            			}
+		    	            			else {
+		    	            				logger.error("Scene Device node ID needs to be >1 in scene {}", sceneId);
+		    	            				throw new ZWaveSceneException("Controller node ID needs to be >1", sceneId);
+		    	            			}
+		    	            			
+		    	            			
 		    	            		}
+		            				reader.moveUp();
 		            			}
-		            			reader.moveUp();
+		            			
 		            		}
 		            		else if ("controllers".equalsIgnoreCase(nodeName)) {
-		            			reader.moveDown();
 		            			while (reader.hasMoreChildren()) {
+		            				reader.moveDown();
 		            				nodeName = reader.getNodeName();
 		            				if ("controller".equalsIgnoreCase(nodeName)) {
 		    	            			int nodeId = Integer.parseInt(reader.getAttribute("node"));
 		    	            			int button = Integer.parseInt(reader.getValue());
-		    	            			sceneManager.addSceneController(sceneId, nodeId, button);
+		    	            			if( nodeId != 0 && button !=0) {
+		    	            				sceneManager.addSceneController(sceneId, nodeId, button);
+		    	            			}
+		    	            			else {
+		    	            				logger.error("Scene Controller node and groupId/buttonId needs to be >1 in scene {}", sceneId);
+		    	            				throw new ZWaveSceneException("Controller node and groupId/buttonId needs to be >1",sceneId);
+		    	            			}
+		    	            			
 		    	            		}
+		            				reader.moveUp();
 		            			}
-		            			reader.moveUp();
 		            		}
-		            		
+		            		reader.moveUp();
 		            	}
-		            	reader.moveUp();
+		            	
 		            }
-		    	}  		
+		            reader.moveUp();
+		    	}
+	    		
 	    	}
 	    	catch (ZWaveSceneException e) {
 	    		logger.error(String.format("SCENE MANAGER: Error reading scenes from file. Error : %s", e.getMessage()));
