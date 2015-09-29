@@ -275,7 +275,7 @@ public class ZWaveSceneController implements ZWaveEventListener {
 	 * 
 	 * @return true if the indicator state is valid and can be used
 	 */
-	public boolean isIndicatorSateValid() {
+	public boolean isIndicatorStateValid() {
 		return indicatorValid;
 	}
 	
