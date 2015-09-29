@@ -17,7 +17,7 @@ import com.thoughtworks.xstream.annotations.XStreamAlias;
 import com.thoughtworks.xstream.annotations.XStreamOmitField;
 
 /**
- * This class provides a storage class for zwave scene devices
+ * This class provides a storage class for Z-Wave scene devices
  * This is then serialized to XML.
  *
  * @author Pedro Paixao
