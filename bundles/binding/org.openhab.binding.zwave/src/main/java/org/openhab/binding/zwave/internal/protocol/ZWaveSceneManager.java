@@ -9,6 +9,7 @@
 package org.openhab.binding.zwave.internal.protocol;
 
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -60,7 +61,7 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	private HashMap<Integer, ZWaveScene> sceneManagerStore;
 	
 	// <controlerNodeId, <groupId, sceneId>>
-	private HashMap<Integer, HashMap<Integer, Integer>> sceneControllerStore;
+	private HashMap<Integer, HashMap<Integer, Integer>> sceneControllerStore; 
 	
 	@XStreamOmitField
 	private ZWaveController controller;
@@ -69,12 +70,11 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 		controller = zController;
 		sceneManagerStore = new HashMap<Integer, ZWaveScene>();
 		sceneControllerStore = new HashMap<Integer, HashMap<Integer, Integer>>();
-		
 		logger.info("SCENE MANAGER: Register event listener");
 		controller.addEventListener(this);
 		
 		Timer initTimer = new Timer();
-		initTimer.schedule(new ProgramTestSceneTask(), 1000);
+		initTimer.schedule(new ProgramTestSceneTask(), 30000);
 		
 	}
 	
@@ -86,19 +86,20 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	}
 	
 	public void testScene() {
-		int sceneId = 0;
+		/*int sceneId = 0;
 		try {
 			sceneId = newScene("test");
 		} catch (ZWaveSceneException e) {
 			e.printStackTrace();
 		}
 		logger.info("Scene Manager Test Scene {}", sceneId);
-		/* addDevice(sceneId, 4, 50);
+		addDevice(sceneId, 4, 50);
 		addSceneController(sceneId, 2, 1);
 		addSceneController(sceneId, 3, 1);
 		getScene("test").program();
 		sceneSerializer.serialize(this); */
 		sceneSerializer.deserialize(this);
+		getScene("test").program();
 	}
 	
 	public HashMap<Integer, ZWaveScene> getScenes() {
@@ -122,7 +123,7 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 	 */
 	public ZWaveScene getScene(String name) {
 		for(ZWaveScene s : sceneManagerStore.values()) {
-			if (s.getName() == name) {
+			if (s.getName().equalsIgnoreCase(name)) {
 				return s;
 			}
 		}
@@ -419,5 +420,4 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 			}
 		}
 	}
-	
 }
