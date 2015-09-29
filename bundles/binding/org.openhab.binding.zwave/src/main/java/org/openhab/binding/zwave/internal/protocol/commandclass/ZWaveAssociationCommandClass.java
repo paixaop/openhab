@@ -224,7 +224,7 @@ public class ZWaveAssociationCommandClass extends ZWaveCommandClass
 	 */
 	protected void processGroupingsReport(SerialMessage serialMessage, int offset) {
 		maxGroups = serialMessage.getMessagePayloadByte(offset + 1);
-		logger.debug("NODE {}: processGroupingsReport number of groups {}", getNode(), maxGroups);
+		logger.debug("NODE {}: processGroupingsReport number of groups {}", this.getNode(), maxGroups);
 
 		initialiseDone = true;
 
