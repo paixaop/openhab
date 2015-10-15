@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveAssociationCommandClass;
+import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass;
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveConfigurationCommandClass;
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveSceneActivationCommandClass;
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass.CommandClass;
@@ -46,18 +47,9 @@ public class ZWaveScene {
 	private String sceneName;
 	private int sceneId;
 	
-	@XStreamOmitField
-	private ZWaveController controller;
 
 	// Map nodes to scene controlled devices Hash<nodeId, sceneDevice>
-	private HashMap<Integer, ZWaveSceneDevice> devices;
-
-	// map nodes to scene controller devices Hash<nodeId, sceneController>
-	private HashMap<Integer, ZWaveSceneController> sceneControllers;
-
-	// Map nodes to node buttons Hash<nodeId, buttonID>
-	@XStreamOmitField
-	private HashMap<Integer, Integer> sceneControllerButtons;
+	private HashMap<String, Integer> devices;
 
 	private byte dimmingDuration;
 
@@ -66,58 +58,29 @@ public class ZWaveScene {
 	private byte override;
 
 	ZWaveScene() {
-		init(null, 0, "", DEFAULT_DIMMING_DURATION);
-	}
-	
-	ZWaveScene(ZWaveController zController) {
-		init(zController, 0, "", DEFAULT_DIMMING_DURATION);
+		init(0, "", DEFAULT_DIMMING_DURATION);
 	}
 
-	ZWaveScene(ZWaveController zController, int sId) {
-		init(zController, sId, "", DEFAULT_DIMMING_DURATION);
+	ZWaveScene(int sId, String name, byte duration) {
+		init(sId, name, DEFAULT_DIMMING_DURATION);
 	}
 
-	ZWaveScene(ZWaveController zController, int sId, String name) {
-		init(zController, sId, name, DEFAULT_DIMMING_DURATION);
-	}
-
-	ZWaveScene(ZWaveController zController, int sId, String name, byte duration) {
-		init(zController, sId, name, DEFAULT_DIMMING_DURATION);
-	}
-
-	private void init(ZWaveController zController, int sId, String name,
-			byte duration) {
-		controller = zController;
+	private void init(int sId, String name, byte duration) {
 		sceneName = name;
 		sceneId = sId;
 		dimmingDuration = duration;
 		override = DEFAULT_OVERRIDE;
 
-		devices = new HashMap<Integer, ZWaveSceneDevice>();
-		sceneControllers = new HashMap<Integer, ZWaveSceneController>();
-		sceneControllerButtons = new HashMap<Integer, Integer>();
+		devices = new HashMap<String, Integer>();
 	}
-
+	
 	/**
-	 * Checks is the specified button of a scene controller can control this
-	 * scene
+	 * Set Scene ID. All Z-Wave scene devices must support 255 scenes
 	 * 
-	 * @param nodeId
-	 *            scene controller ID
-	 * @param groupId
-	 *            button ID
-	 * @return true if button on scene controller can control this scene
+	 * @param newId
 	 */
-	public boolean isSceneContollerBoundToScene(int nodeId, int groupId) {
-		if (sceneControllers.containsKey(nodeId)
-				&& sceneControllerButtons.get(nodeId) == groupId) {
-			return true;
-		}
-		return false;
-	}
-
-	public int getSceneControllerButton(int controllerId) {
-		return sceneControllerButtons.get(controllerId);
+	public void setId(int newId) {
+		sceneId = newId;
 	}
 	
 	/**
@@ -129,6 +92,15 @@ public class ZWaveScene {
 		return sceneId;
 	}
 
+	/**
+	 * Set scene name
+	 * 
+	 * @param newName
+	 */
+	public void setName(String newName) {
+		sceneName = newName;
+	}
+	
 	/**
 	 * Get scene name
 	 * 
@@ -180,214 +152,8 @@ public class ZWaveScene {
 		return override;
 	}
 
-	/**
-	 * Set Scene ID. All Z-Wave scene devices must support 255 scenes
-	 * 
-	 * @param newId
-	 */
-	public void setId(int newId) {
-		sceneId = newId;
-	}
-
-	/**
-	 * Set scene name
-	 * 
-	 * @param newName
-	 */
-	public void setName(String newName) {
-		sceneName = newName;
-	}
-
-	/**
-	 * Add a new scene controller to the scene and bind a group on the device to
-	 * activate it. Groups are usually associated with physical buttons on the
-	 * device. Please check the device manual
-	 * 
-	 * @param ZWaveSceneController
-	 * @param group
-	 */
-	public void putSceneController(ZWaveSceneController sc, int group) {
-		ZWaveNode node = sc.getNode();
-		if (node != null) {
-			if (sc.isButtonIdValid(group)) {
-				sceneControllers.put(node.getNodeId(), sc);
-				logger.info("Node {} group {} bound to scene {}",
-						node.getNodeId(), group, sceneId);
-				sceneControllerButtons.put(node.getNodeId(), group);
-				sc.setControllerEvents();
-			} else {
-				logger.warn(
-						"Node {} attempt to bind an invalid group to scene controller.",
-						node.getNodeId());
-			}
-		} else {
-			logger.warn("Scene Conotroller object does not have valid node information. Cannot add it to scene");
-		}
-	}
-
-	public void syncSceneControllers(int nodeId, boolean on) {
-		if (sceneControllerButtons.size() <= 1) {
-			// nothing to sync if it's only one controller in this scene
-			return;
-		}
-
-		for (Integer controllerId : sceneControllerButtons.keySet()) {
-
-			if (controllerId == nodeId) {
-				continue;
-			}
-
-			int buttonId = sceneControllerButtons.get(controllerId);
-			ZWaveSceneController sc = sceneControllers.get(controllerId);
-			if (on) {
-				logger.info(
-						"NODE {} Scene Controller Sync Set Button {} to ON for Scene {}",
-						nodeId, buttonId, sceneId);
-				sc.setButtonOn(buttonId);
-			} else {
-				logger.info(
-						"NODE {} Scene Controller Sync Set Button {} to OFF for Scene {}",
-						nodeId, buttonId, sceneId);
-				sc.setButtonOff(buttonId);
-			}
-			sceneControllers.put(controllerId, sc);
-		}
-	}
-
-	/**
-	 * Add a new scene controller to the scene and bind a group on the device to
-	 * activate it. Groups are usually associated with physical buttons on the
-	 * device. Please check the device manual
-	 * 
-	 * @param node
-	 *            ID of the scene controller
-	 * @param group
-	 */
-	public void putSceneController(int nodeId, int group) {
-		ZWaveNode node = controller.getNode(nodeId);
-		if (node != null) {
-			ZWaveSceneController sc = new ZWaveSceneController(controller, node);
-			putSceneController(sc, group);
-		}
-	}
-
-	/**
-	 * Remove a scene controller from scene
-	 * 
-	 * @param scene
-	 *            controller
-	 */
-	public void removeSceneController(ZWaveSceneController sc) {
-		ZWaveNode node = sc.getNode();
-		if (node != null) {
-			sceneControllers.remove(node.getNodeId());
-			sceneControllerButtons.remove(node.getNodeId());
-		} else {
-			logger.warn("Scene Conotroller object does not have valid node information. Cannot remove it to scene");
-		}
-	}
-
-	/**
-	 * Remove an existing scene controller, i.e., this controller can no longer
-	 * trigger this scene.
-	 * 
-	 * @param nodeId
-	 */
-	public void removeSceneController(int nodeId) {
-		if (sceneControllers.containsKey(nodeId)) {
-			ZWaveSceneController sc = sceneControllers.get(nodeId);
-			sc.removeControllerEvents();
-			sceneControllers.remove(nodeId);
-			sceneControllerButtons.remove(nodeId);
-		} else {
-			logger.warn("Scene Conotroller object does not have valid node information. Cannot remove it to scene");
-		}
-	}
-
-	/**
-	 * Get list of all scene controllers bound to scene
-	 * 
-	 * @return hash list of controllers
-	 */
-	public HashMap<Integer, ZWaveSceneController> getSceneControllers() {
-		return sceneControllers;
-	}
-
-	/**
-	 * Get Scene Controller based on node ID
-	 * 
-	 * @param nodeId
-	 * @return scene controller
-	 */
-	public ZWaveSceneController getSceneController(int nodeId) {
-		return sceneControllers.get(nodeId);
-	}
-
-	/**
-	 * Activate scene and sync scene controller indicators if the INDICATOR
-	 * Command Class is supported
-	 */
-	public void activate() {
-		// Get all the controllers associated with scene
-		if (!sceneControllers.isEmpty()) {
-			logger.info("Scene {} activate", sceneId);
-
-			// Iterate all nodes that can control this scene and update their
-			// button status to ON.
-			for (int nodeId : sceneControllerButtons.keySet()) {
-				int buttonId = sceneControllerButtons.get(nodeId);
-
-				ZWaveSceneController sc = sceneControllers.get(nodeId);
-				sc.setButtonOn(buttonId);
-				sceneControllers.put(nodeId, sc);
-			}
-		} else {
-			logger.info("Scene {} has no scene controllers bound to it.",
-					sceneId);
-		}
-	}
-
-	/**
-	 * Create groups of devices that do not support the scene activation command
-	 * class by value.
-	 * 
-	 * @param sceneId
-	 * @return H<value, NodeIdList>
-	 */
-	public HashMap<Integer, ArrayList<Integer>> groupDevicesByLevels() {
-		// Init groups
-		HashMap<Integer, ArrayList<Integer>> groups = new HashMap<Integer, ArrayList<Integer>>();
-
-		// Iterate all devices
-		for (ZWaveSceneDevice d : devices.values()) {
-
-			// Get device value
-			int value = d.getValue();
-
-			// Does device support scene activation command class?
-			if (d.isSceneSupported()) {
-				// Scene activation command class supported no need to group
-				// Scene configuration for these devices is done directly with
-				// Scene Actuator Configuration command class.
-				continue;
-			}
-
-			ArrayList<Integer> deviceList;
-
-			if (groups.containsKey(value)) {
-				// There's at least one device in the list already
-				deviceList = groups.get(value);
-			} else {
-				// Add a new device list
-				deviceList = new ArrayList<Integer>();
-			}
-
-			deviceList.add(d.getNodeId());
-			groups.put((Integer) value, deviceList);
-		}
-
-		return groups;
-	}
+	
+	
 
 	/**
 	 * Get a list of nodes that support the SCENE ACTIVATION command class
@@ -663,7 +429,7 @@ public class ZWaveScene {
 	 * @param nodeId
 	 * @return scene device
 	 */
-	public ZWaveSceneDevice getDevice(int nodeId) {
+	public Integer getDeviceValue(int nodeId) {
 		return devices.get(nodeId);
 	}
 
@@ -682,7 +448,7 @@ public class ZWaveScene {
 	 * @return HashMap<Integer, ZWaveSceneDevice> with the nodeIds of every node
 	 *         in the scene, and the value is a SceneDevice
 	 */
-	public HashMap<Integer, ZWaveSceneDevice> getDevices() {
+	public HashMap<String, Integer> getDevices() {
 		return devices;
 	}
 

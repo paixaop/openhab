@@ -13,7 +13,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
+import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass;
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveCommandClass.CommandClass;
 import org.openhab.binding.zwave.internal.protocol.event.ZWaveCommandClassValueEvent;
 import org.openhab.binding.zwave.internal.protocol.event.ZWaveEvent;
@@ -362,6 +365,100 @@ public class ZWaveSceneManager implements ZWaveEventListener {
 			return;
 		}
 		logger.info("Scene {} not found. Cannot activate it", sceneId);
+	}
+	
+	public boolean isValidNodeAddress(String nodeAddr) {
+		Pattern r = Pattern.compile("^(\\d+)(?::(\\d+)|)$");
+		Matcher m = r.matcher(nodeAddr);
+		if( m.find() ) {
+			return true;
+		}
+		return false;
+	}
+	
+	public int getNode(String nodeAddr) {
+		if( isValidNodeAddress(nodeAddr)) {
+			Pattern r = Pattern.compile("^(\\d+)(?::(\\d+)|)$");
+			Matcher m = r.matcher(nodeAddr);
+			if( m.find() ) {
+				return Integer.parseInt(m.group(1));
+			}
+		}
+		return 0;
+	}
+	
+	public int getEndPoint(String nodeAddr) {
+		if( isValidNodeAddress(nodeAddr)) {
+			Pattern r = Pattern.compile("^(\\d+)(?::(\\d+)|)$");
+			Matcher m = r.matcher(nodeAddr);
+			if( m.find() && m.group(2) != null ) {
+				return Integer.parseInt(m.group(2));
+			}
+		}
+		return 0;
+	}
+	
+	public String toNodeAddr(int node, int endpoint) {
+		return node + ":" + endpoint;
+	}
+	
+	public String toNodeAddr(int node) {
+		return node + ":0";
+	}
+	
+	public boolean isSceneCommandClassSupported(String nodeAddr) {
+		int nodeId = getNode(nodeAddr);
+		ZWaveNode node = controller.getNode(nodeId);
+		ZWaveCommandClass c = node.getCommandClass(ZWaveCommandClass.CommandClass.SCENE_ACTIVATION);
+		if (c != null) {
+			return true;
+		}
+		return false;
+	}
+	
+	/**
+	 * Create groups of devices that do not support the scene activation command
+	 * class by value.
+	 * 
+	 * @param sceneId
+	 * @return H<value, NodeIdList>
+	 */
+	private HashMap<Integer, ArrayList<String>> groupDevicesByLevels(int sceneId) {
+		
+		if( !sceneManagerStore.containsKey(sceneId) ) {
+			return null;
+		}
+		
+		HashMap<String, Integer> devices = sceneManagerStore.get(sceneId).getDevices();
+		HashMap<Integer, ArrayList<String>> groups = new HashMap<Integer, ArrayList<String>>();
+
+		// Iterate all devices
+		for (String nodeAddr : devices.keySet()) {
+
+			// Does device support scene activation command class?
+			if (isSceneCommandClassSupported(nodeAddr)) {
+				// Scene activation command class supported no need to group
+				// Scene configuration for these devices is done directly with
+				// Scene Actuator Configuration command class.
+				continue;
+			}
+
+			ArrayList<String> deviceList;
+			int value = devices.get(nodeAddr);
+			
+			if (groups.containsKey(value)) {
+				// There's at least one device in the list already
+				deviceList = groups.get(value);
+			} else {
+				// Add a new device list
+				deviceList = new ArrayList<String>();
+			}
+
+			deviceList.add(nodeAddr);
+			groups.put((Integer) value, deviceList);
+		}
+
+		return groups;
 	}
 	
 	/**
