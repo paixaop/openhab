@@ -8,10 +8,12 @@
  */
 package org.openhab.binding.zwave.internal.converter;
 
+import java.util.ArrayList;
 import java.util.Map;
 
 import org.openhab.binding.zwave.internal.converter.command.IntegerCommandConverter;
 import org.openhab.binding.zwave.internal.converter.command.ZWaveCommandConverter;
+import org.openhab.binding.zwave.internal.converter.state.BigDecimalOnOffTypeConverter;
 import org.openhab.binding.zwave.internal.converter.state.IntegerDecimalTypeConverter;
 import org.openhab.binding.zwave.internal.converter.state.ZWaveStateConverter;
 import org.openhab.binding.zwave.internal.protocol.SerialMessage;
@@ -19,8 +21,10 @@ import org.openhab.binding.zwave.internal.protocol.ZWaveController;
 import org.openhab.binding.zwave.internal.protocol.ZWaveNode;
 import org.openhab.binding.zwave.internal.protocol.commandclass.ZWaveIndicatorCommandClass;
 import org.openhab.binding.zwave.internal.protocol.event.ZWaveCommandClassValueEvent;
+import org.openhab.binding.zwave.internal.protocol.event.ZWaveIndicatorCommandClassChangeEvent;
 import org.openhab.core.events.EventPublisher;
 import org.openhab.core.items.Item;
+import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.State;
 import org.slf4j.Logger;
@@ -45,9 +49,9 @@ public class ZWaveIndicatorConverter extends ZWaveCommandClassConverter<ZWaveInd
 	public ZWaveIndicatorConverter(ZWaveController controller, EventPublisher eventPublisher) {
 		super(controller, eventPublisher);
 		
-		// State and commmand converters used by this converter. 
+		// State and command converters used by this converter. 
 		this.addStateConverter(new IntegerDecimalTypeConverter());
-		
+		this.addStateConverter(new BigDecimalOnOffTypeConverter());
 		this.addCommandConverter(new IntegerCommandConverter());
 	}
 
@@ -73,8 +77,23 @@ public class ZWaveIndicatorConverter extends ZWaveCommandClassConverter<ZWaveInd
 			return;
 		}
 		
-		State state = converter.convertFromValueToState(event.getValue());
-		this.getEventPublisher().postUpdate(item.getName(), state);
+		int bit = Integer.parseInt(arguments.get("bit"));
+		ZWaveIndicatorCommandClassChangeEvent e = (ZWaveIndicatorCommandClassChangeEvent) event;
+		ArrayList<Integer> bitChanges = e.changes();
+		
+		// Check if any of the "changed" or pressed buttons match the desired button
+		for(Integer changedBit : bitChanges) {
+			if( bit == changedBit) { 
+				if( e.isBitOn(bit) ) {
+					// Turn ON
+					this.getEventPublisher().postUpdate(item.getName(),converter.convertFromValueToState(0xFF));
+				}
+				else {
+					// Turn OFF
+					this.getEventPublisher().postUpdate(item.getName(),converter.convertFromValueToState(0x00));
+				}
+			}
+		}
 	}
 
 	/**
@@ -90,7 +109,21 @@ public class ZWaveIndicatorConverter extends ZWaveCommandClassConverter<ZWaveInd
 			return;
 		}
 
-		SerialMessage serialMessage = node.encapsulate(commandClass.setValueMessage((Integer)converter.convertFromCommandToValue(item, command)), commandClass, endpointId);
+		int bit = Integer.parseInt(arguments.get("bit"));
+		
+		if( !(command instanceof OnOffType) )  {
+			return;
+		}
+			
+		int newIndicator;
+		if (command == OnOffType.ON) {
+			newIndicator = commandClass.setBitOn(bit);
+		}
+		else {
+			newIndicator = commandClass.setBitOff(bit);
+		}
+		
+		SerialMessage serialMessage = node.encapsulate(commandClass.setValueMessage(newIndicator), commandClass, endpointId);
 		
 		if (serialMessage == null) {
 			logger.warn("NODE {}: Generating message failed for command class = {}, endpoint = {}", node.getNodeId(), commandClass.getCommandClass().getLabel(), endpointId);
