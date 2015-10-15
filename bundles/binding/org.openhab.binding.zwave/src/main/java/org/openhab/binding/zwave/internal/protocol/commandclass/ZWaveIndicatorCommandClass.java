@@ -171,5 +171,67 @@ public class ZWaveIndicatorCommandClass extends ZWaveCommandClass implements ZWa
     	result.setMessagePayload(newPayload);
     	return result;		
 	}
-
+	
+	/**
+	 * check if button is ON of OFF
+	 * @param buttonId
+	 * @return true if button is ON, false if it is OFF
+	 */
+	public boolean isBitOn(int bitId) {
+		int b = indicator & (0x01 << bitId); 
+		if (b != 0) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	/**
+	 * Set an indicator bit to ON 
+	 * @param bit ID of the button that will be tuned on
+	 */
+	public int setBitOn(int bit) {
+		if (bit> 8 || bit <0) {
+			logger.error("NODE {} Cannot set Indicator bit. Invalid bit {}", this.getNode().getNodeId(), bit);
+			return indicator;
+		}
+		
+		// If bit is already ON do nothing!
+		if (!isBitOn(bit)) {
+			byte buttonMask = (byte) (0x01 << bit);
+			int newIndicator = (byte) (indicator | buttonMask);
+			logger.info(String.format("NODE %d Indicator Bit %d to ON. Indicator = 0x%02X", this.getNode().getNodeId(), bit, indicator));
+			return newIndicator;
+		}
+		return indicator;
+	}
+	
+	/**
+	 * Set an indicator bit to OFF 
+	 * @param bit ID of the button that will be tuned on
+	 */
+	public int setBitOff(int bit) {
+		if (bit> 8 || bit <0) {
+			logger.error("NODE {} Cannot set Indicator bit. Invalid bit {}", this.getNode().getNodeId(), bit);
+			return indicator;
+		}
+		
+		// If bit is already OFF do nothing!
+		if (isBitOn(bit)) {
+			byte buttonMask = (byte) ~(0x01 << bit);
+			int newIndicator = (byte) (indicator & buttonMask);
+			logger.info(String.format("NODE %d Indicator Bit %d to OFF. Indicator = 0x%02X", this.getNode().getNodeId(), bit, indicator));
+			return newIndicator;
+		}
+		return indicator;
+	}
+	
+	/**
+	 * Get current indicator value
+	 * @return indicator 
+	 */
+	public int getValue() {
+		return indicator;
+	}
+	
 }
