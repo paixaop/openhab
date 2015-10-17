@@ -532,7 +532,7 @@
 		</dependency>
 		<dependency>
 			<groupId>org.openhab.action</groupId>
-			<artifactId>org.openhab.action.dscalarm</artifactId>
+			<artifactId>org.openhab.action.telegram</artifactId>
 			<version>${project.version}</version>
 			<type>jar</type>
 		</dependency>
