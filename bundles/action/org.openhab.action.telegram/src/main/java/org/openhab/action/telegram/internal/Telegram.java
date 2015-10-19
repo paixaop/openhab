@@ -56,7 +56,14 @@ public class Telegram {
 		@ParamDoc(name="group") String group, 
 		@ParamDoc(name="message") String message) {
 		
-		String url = String.format(TELEGRAM_URL, groupTokens.get(group).getToken());
+		String url;
+		if( groupTokens.containsKey(group)) {
+			url = String.format(TELEGRAM_URL, groupTokens.get(group).getToken());
+		}
+		else {
+			logger.warn("Group " + group + " has not been configured in openhab config file. Please do so before sending telegrams");
+			return false;
+		}
 		
 		HttpClient client = new HttpClient();
 		
@@ -76,7 +83,7 @@ public class Telegram {
 			}
 			
 			if (statusCode != HttpStatus.SC_OK) {
-				logger.warn("Method failed: " + postMethod.getStatusLine());
+				logger.warn("Method failed: " + postMethod.getResponseBodyAsString() + " " + postMethod.getStatusLine());
 				return false;
 			}
 

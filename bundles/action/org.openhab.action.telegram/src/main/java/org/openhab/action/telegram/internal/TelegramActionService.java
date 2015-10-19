@@ -13,6 +13,8 @@ import java.util.Dictionary;
 import org.openhab.core.scriptengine.action.ActionService;
 import org.osgi.service.cm.ConfigurationException;
 import org.osgi.service.cm.ManagedService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 	
 
 /**
@@ -22,6 +24,8 @@ import org.osgi.service.cm.ManagedService;
  * @since 1.8.0
  */
 public class TelegramActionService implements ActionService, ManagedService {
+	
+	private static final Logger logger = LoggerFactory.getLogger(Telegram.class);
 
 	/**
 	 * Indicates whether this action is properly configured which means all
@@ -61,6 +65,10 @@ public class TelegramActionService implements ActionService, ManagedService {
 				String tokenKey = String.format("%s.token", bot);
 				if (config.get(chatIdKey) != null && config.get(tokenKey) != null) {
 					Telegram.addToken(bot, (String) config.get(chatIdKey), (String) config.get(tokenKey));
+					logger.warn("Bot {} loaded from config file", bot);
+				}
+				else {
+					logger.warn("Bot {} does not have a chatId or token. Please check the Telegram section of the openhab config file", bot);
 				}
 			}
 			isProperlyConfigured = true;
